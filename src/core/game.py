@@ -6,6 +6,7 @@ This is the heart of Multiverse Causality.
 
 import pygame
 import sys
+import asyncio
 from typing import Optional
 
 from .settings import (
@@ -40,6 +41,8 @@ from ..ui.causal_sight_overlay import CausalSightOverlay
 from ..rendering.renderer import Renderer
 from ..rendering.effects import EffectsManager, TransitionType
 from ..rendering.particles import ParticleSystem
+
+from ..ui.tip_manager import TipManager
 
 
 class Game:
@@ -153,6 +156,9 @@ class Game:
         
         # Causal sight overlay
         self.causal_sight = CausalSightOverlay()
+        
+        # Tip manager
+        self.tip_manager = TipManager()
     
     def _register_levels(self) -> None:
         """Register all game levels."""
@@ -169,8 +175,8 @@ class Game:
         EventSystem.subscribe(GameEvent.PLAYER_DIED, self._on_player_died)
         EventSystem.subscribe(GameEvent.CAUSAL_SIGHT_TOGGLED, self._on_causal_sight_toggled)
     
-    def run(self) -> None:
-        """Main game loop."""
+    async def run(self) -> None:
+        """Main game loop (async for pygbag web deployment)."""
         while self.running:
             # Calculate delta time
             self.dt = self.clock.tick(FPS) / 1000.0
@@ -189,6 +195,9 @@ class Game:
             
             # Update display
             pygame.display.flip()
+            
+            # Yield to browser event loop (required for pygbag)
+            await asyncio.sleep(0)
         
         # Cleanup
         self._cleanup()
@@ -292,6 +301,10 @@ class Game:
         self.universe_indicator.update(self.dt)
         self.paradox_meter.update(self.dt)
         self.causal_sight.update(self.dt)
+        self.tip_manager.update(self.dt)
+        
+        # Check proximity tips
+        self.tip_manager.check_proximity(self.player.x, self.player.y)
         
         # Update causal sight connections
         if self.causal_sight.is_active():
@@ -344,8 +357,17 @@ class Game:
         self.multiverse.switch_universe(next_type)
         
         # Visual feedback
-        self.effects.flash(self._get_universe_color(next_type), 0.15)
+        color = self._get_universe_color(next_type)
+        self.effects.flash(color, 0.15)
         self.camera.shake(5, 0.2)
+        
+        # Particle burst around player to emphasize the switch
+        self.particles.emit(
+            self.player.x + self.player.width / 2,
+            self.player.y + self.player.height / 2,
+            count=12, color=color,
+            speed=80, lifetime=0.4
+        )
     
     def _get_universe_color(self, u_type: UniverseType) -> tuple:
         """Get color for a universe type."""
@@ -366,6 +388,7 @@ class Game:
             self.player.width + 20, self.player.height + 20
         )
         
+        interacted = False
         for entity in self.current_level.get_entities():
             if not entity.interactive or not entity.exists:
                 continue
@@ -378,7 +401,24 @@ class Game:
             if player_rect.colliderect(entity_rect):
                 if hasattr(entity, 'on_interact'):
                     entity.on_interact(self.player)
+                    interacted = True
+                    
+                    # Interaction particle feedback
+                    self.particles.emit(
+                        entity.x + entity.width / 2,
+                        entity.y + entity.height / 2,
+                        count=6, color=(100, 255, 200),
+                        speed=40, lifetime=0.3
+                    )
                     break
+        
+        if not interacted:
+            # No interactable found - show a hint
+            EventSystem.emit(GameEvent.UI_MESSAGE, {
+                "message": "Nothing to interact with here. Look for switches or objects!",
+                "type": "info",
+                "duration": 1.5
+            })
     
     def _check_entity_interactions(self) -> None:
         """Check for automatic entity interactions."""
@@ -438,15 +478,31 @@ class Game:
             if attack_rect.colliderect(entity_rect):
                 if hasattr(entity, 'take_damage'):
                     defeated = entity.take_damage(self.player.attack_damage)
+                    
+                    # Hit feedback - particles at the hit point
+                    hit_x = (self.player.x + self.player.width / 2 + entity.x + entity.width / 2) / 2
+                    hit_y = (self.player.y + self.player.height / 2 + entity.y + entity.height / 2) / 2
+                    self.particles.emit(
+                        hit_x, hit_y,
+                        count=8, color=(255, 200, 100),
+                        speed=60, lifetime=0.3
+                    )
+                    
                     if defeated:
                         # Visual feedback
                         self.camera.shake(8, 0.15)
-                        # Spawn particles at enemy position
+                        # Spawn death particles at enemy position
                         self.particles.emit(
-                            entity.center[0], entity.center[1],
-                            count=15, color=(255, 100, 100),
-                            speed=100, lifetime=0.5
+                            entity.x + entity.width / 2,
+                            entity.y + entity.height / 2,
+                            count=20, color=(255, 100, 100),
+                            speed=120, lifetime=0.6
                         )
+                        EventSystem.emit(GameEvent.UI_MESSAGE, {
+                            "message": "Enemy defeated!",
+                            "type": "success",
+                            "duration": 2.0
+                        })
     
     def _update_causal_sight(self) -> None:
         """Update causal sight overlay with entity positions."""
@@ -535,6 +591,9 @@ class Game:
         # Render UI
         self.hud.render(self.screen)
         
+        # Render tips
+        self.tip_manager.render(self.screen)
+        
         # Debug info
         if self.renderer.debug_mode:
             self.renderer.draw_debug_info({
@@ -556,6 +615,8 @@ class Game:
         self.current_level = self.level_loader.load_level("level_01", self.player)
         
         if self.current_level:
+            # Load proximity tips for this level
+            self._load_level_tips("level_01")
             # Set camera bounds
             self.camera.set_world_bounds(
                 self.current_level.width_pixels,
@@ -616,6 +677,9 @@ class Game:
             self.hud.set_player_health(self.player.health, self.player.max_health)
             self.paradox_meter.set_level(0)
             
+            # Reload tips
+            self._load_level_tips(self.current_level.config.level_id)
+            
             self.state_manager.change_state(GameState.PLAYING)
             self.menu.hide()
             self.input_handler.enable()
@@ -634,6 +698,9 @@ class Game:
             self.camera.center_on(self.player.x, self.player.y)
             self.hud.set_keys(0, self.current_level.config.required_keys)
             self.paradox_meter.set_level(0)
+            
+            # Load tips for the new level
+            self._load_level_tips(self.current_level.config.level_id)
             
             self.state_manager.change_state(GameState.PLAYING)
             self.menu.hide()
@@ -740,12 +807,19 @@ class Game:
         else:
             self.causal_sight.deactivate()
     
+    def _load_level_tips(self, level_id: str) -> None:
+        """Load proximity tips for a level."""
+        self.tip_manager.reset_for_level()
+        proximity_tips = self.tip_manager.get_level_proximity_tips(level_id)
+        self.tip_manager.add_proximity_tips(proximity_tips)
+    
     def _cleanup(self) -> None:
         """Clean up resources."""
         if self.current_level:
             self.current_level.cleanup()
         
         self.hud.cleanup()
+        self.tip_manager.cleanup()
         EventSystem.clear()
         
         pygame.mixer.quit()
@@ -755,7 +829,7 @@ class Game:
 def main():
     """Entry point for the game."""
     game = Game()
-    game.run()
+    asyncio.run(game.run())
 
 
 if __name__ == "__main__":
