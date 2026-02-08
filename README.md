@@ -2,6 +2,8 @@
 
 ![Fractured Causality Banner](assets/images/banner.png)
 
+*Banner image generated using [ChatGPT](https://chatgpt.com/) (AI-generated artwork)*
+
 # 🌌 FRACTURED CAUSALITY
 
 ### *Where Every Action Echoes Across Parallel Universes*
@@ -324,6 +326,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - Built with **Python** and **Pygame**
 - Inspired by quantum mechanics, multiverse theory, and causal logic
 - Created as a showcase of advanced game development techniques
+- **Banner image** was generated using **ChatGPT** (AI-generated artwork)
 
 ---
 
