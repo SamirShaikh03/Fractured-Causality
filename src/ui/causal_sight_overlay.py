@@ -8,7 +8,7 @@ import pygame
 import math
 from typing import List, Tuple, Dict, Optional
 
-from ..core.settings import SCREEN_WIDTH, SCREEN_HEIGHT
+from ..core.settings import SCREEN_WIDTH, SCREEN_HEIGHT, get_ui_font
 from ..multiverse.causal_node import CausalNode, CausalOperator
 from ..multiverse.causal_graph import CausalGraph
 
@@ -41,7 +41,7 @@ class CausalSightOverlay:
     def __init__(self):
         """Initialize the causal sight overlay."""
         pygame.font.init()
-        self._font = pygame.font.Font(None, 18)
+        self._font = get_ui_font(18)
         
         # State
         self._active: bool = False

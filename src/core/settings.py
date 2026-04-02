@@ -7,6 +7,8 @@ Changing values here affects the entire game.
 
 import pygame
 import os
+import sys
+from typing import Optional
 
 # =============================================================================
 # DISPLAY SETTINGS
@@ -123,7 +125,7 @@ COLOR_CAUSAL_INVERSE = (255, 100, 100)
 COLOR_PARADOX_GLOW = (255, 50, 50)
 
 # =============================================================================
-# UI SETTINGS
+# UI & FONT SETTINGS
 # =============================================================================
 
 UI_FONT_SIZE = 24
@@ -131,6 +133,56 @@ UI_FONT_SIZE_LARGE = 36
 UI_FONT_SIZE_SMALL = 16
 UI_PADDING = 10
 UI_MARGIN = 20
+
+FONT_FAMILY = "Press Start 2P"
+FONT_FILE_NAME = "PressStart2P-Regular.ttf"
+FONT_PATH = None
+
+
+def _resolve_ui_font_path() -> Optional[str]:
+    """Resolve a usable Press Start 2P font path from common locations."""
+    if FONT_PATH and os.path.exists(FONT_PATH):
+        return FONT_PATH
+
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    fonts_dir = os.path.join(base_dir, "assets", "fonts")
+    candidate_names = (
+        FONT_FILE_NAME,
+        "PressStart2P.ttf",
+        "Press Start 2P.ttf",
+    )
+
+    for name in candidate_names:
+        candidate = os.path.join(fonts_dir, name)
+        if os.path.exists(candidate):
+            return candidate
+
+    # Support frozen builds (PyInstaller-style) where assets are unpacked.
+    meipass_dir = getattr(sys, "_MEIPASS", None)
+    if meipass_dir:
+        frozen_fonts_dir = os.path.join(meipass_dir, "assets", "fonts")
+        for name in candidate_names:
+            candidate = os.path.join(frozen_fonts_dir, name)
+            if os.path.exists(candidate):
+                return candidate
+
+    matched_system_font = pygame.font.match_font(FONT_FAMILY)
+    if matched_system_font and os.path.exists(matched_system_font):
+        return matched_system_font
+
+    return None
+
+def get_ui_font(size=UI_FONT_SIZE):
+    """Get a UI font. Uses Press Start 2P when available, then falls back."""
+    font_path = _resolve_ui_font_path()
+
+    try:
+        return pygame.font.Font(font_path, size)
+    except (TypeError, FileNotFoundError, OSError, RuntimeError, ValueError):
+        try:
+            return pygame.font.SysFont(FONT_FAMILY, size)
+        except (TypeError, OSError, RuntimeError, ValueError):
+            return pygame.font.Font(None, size)
 
 HUD_HEIGHT = 60
 HUD_PARADOX_WIDTH = 200
@@ -190,6 +242,14 @@ PLAYER_INVINCIBILITY_TIME = 1.0
 
 ENEMY_BASE_DAMAGE = 10
 ENEMY_KNOCKBACK_FORCE = 150
+ENEMY_ATTACK_COOLDOWN = 1.2
+
+# =============================================================================
+# PROGRESSION SETTINGS
+# =============================================================================
+
+COINS_PER_LEVEL = 5
+COIN_VALUE = 10
 
 # =============================================================================
 # PATHS

@@ -9,6 +9,8 @@ from typing import Dict, List, Any, Callable
 from dataclasses import dataclass
 import time
 
+from ..core.settings import get_ui_font
+
 
 @dataclass
 class DebugValue:
@@ -33,7 +35,7 @@ class DebugOverlay:
     def __init__(self):
         """Initialize the debug overlay."""
         pygame.font.init()
-        self._font = pygame.font.Font(None, 20)
+        self._font = get_ui_font(20)
         
         # State
         self._visible: bool = False
@@ -104,7 +106,7 @@ class DebugOverlay:
         timestamp = time.strftime("%H:%M:%S")
         self._log_messages.append(f"[{timestamp}] {message}")
         
-        # Trim old messages
+        # Trim old message
         while len(self._log_messages) > self._max_log_messages:
             self._log_messages.pop(0)
     
@@ -133,7 +135,7 @@ class DebugOverlay:
         y = 10
         line_height = 18
         
-        # Background
+        # Backkground
         bg_width = 250
         bg_height = (len(self._values) + len(self._timers) + 
                     len(self._log_messages) + 5) * line_height + 20

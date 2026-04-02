@@ -1,6 +1,4 @@
-"""
-Exit Portal - The level exit that must be reached in all universes.
-"""
+"""Exit Portal - Level goal that requires collected keys."""
 
 import pygame
 from typing import Tuple
@@ -12,27 +10,9 @@ from ...core.events import EventSystem, GameEvent
 
 
 class ExitPortal(Entity):
-    """
-    Exit Portal - The goal of each level.
+    """Exit goal. Player must have required keys to enter."""
     
-    The exit portal exists in all universes (ANCHORED).
-    The player must reach it to complete the level.
-    
-    Visual effects indicate the portal's stability and
-    readiness for use.
-    """
-    
-    def __init__(self, position: Tuple[float, float],
-                 portal_id: str = None,
-                 requires_keys: int = 0):
-        """
-        Initialize an Exit Portal.
-        
-        Args:
-            position: Position
-            portal_id: Unique identifier
-            requires_keys: Number of keys required to use portal
-        """
+    def __init__(self, position: Tuple[float, float], portal_id: str = None, requires_keys: int = 0):
         config = EntityConfig(
             position=position,
             size=(TILE_SIZE + 16, TILE_SIZE + 16),
@@ -82,23 +62,21 @@ class ExitPortal(Entity):
         pygame.draw.circle(self.sprite, (200, 150, 255), center, w // 6)
     
     def on_interact(self, player) -> bool:
-        """
-        Handle player interaction (entering the portal).
-        
-        Args:
-            player: The player entity
-            
-        Returns:
-            True if player entered portal
-        """
         if not self.is_active:
             return False
+
+        player_keys = getattr(player, "keys_collected", 0)
+        if player_keys < self.requires_keys:
+            EventSystem.emit(GameEvent.UI_MESSAGE, {
+                "message": f"Need {self.requires_keys - player_keys} more key(s)!",
+                "type": "warning"
+            })
+            return False
         
-        EventSystem.emit(GameEvent.LEVEL_COMPLETED, {
+        EventSystem.emit(GameEvent.LEVEL_COMPLETE, {
             "portal_id": self.entity_id,
             "stability": self.stability
         })
-        
         return True
     
     def check_player_overlap(self, player) -> bool:

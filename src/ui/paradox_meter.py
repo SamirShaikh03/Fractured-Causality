@@ -9,7 +9,7 @@ import math
 from typing import Tuple
 
 from ..core.settings import (
-    PARADOX_STABLE, PARADOX_UNSTABLE, PARADOX_CRITICAL, PARADOX_COLLAPSE
+    PARADOX_STABLE, PARADOX_UNSTABLE, PARADOX_CRITICAL, PARADOX_COLLAPSE, get_ui_font
 )
 
 
@@ -52,7 +52,7 @@ class ParadoxMeter:
         
         # Fonts
         pygame.font.init()
-        self._font = pygame.font.Font(None, 22)
+        self._font = get_ui_font(22)
     
     def set_level(self, level: float) -> None:
         """

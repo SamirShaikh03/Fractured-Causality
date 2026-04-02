@@ -12,7 +12,7 @@ from typing import Optional
 from .settings import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, GAME_TITLE,
     COLOR_PRIME, COLOR_ECHO, COLOR_FRACTURE,
-    ENEMY_BASE_DAMAGE, ENEMY_KNOCKBACK_FORCE
+    ENEMY_BASE_DAMAGE, ENEMY_KNOCKBACK_FORCE, ENEMY_ATTACK_COOLDOWN
 )
 from .states import GameState, StateManager
 from .events import EventSystem, GameEvent
@@ -26,6 +26,12 @@ from ..levels.level_loader import LevelLoader
 from ..levels.level_01 import Level01
 from ..levels.level_02 import Level02
 from ..levels.level_03 import Level03
+from ..levels.level_04 import Level04
+from ..levels.level_05 import Level05
+from ..levels.level_06 import Level06
+from ..levels.level_07 import Level07
+from ..levels.level_08 import Level08
+from ..levels.level_09 import Level09
 
 from ..systems.input_handler import InputHandler, InputAction
 from ..systems.physics import PhysicsSystem
@@ -165,6 +171,12 @@ class Game:
         self.level_loader.register_level("level_01", Level01)
         self.level_loader.register_level("level_02", Level02)
         self.level_loader.register_level("level_03", Level03)
+        self.level_loader.register_level("level_04", Level04)
+        self.level_loader.register_level("level_05", Level05)
+        self.level_loader.register_level("level_06", Level06)
+        self.level_loader.register_level("level_07", Level07)
+        self.level_loader.register_level("level_08", Level08)
+        self.level_loader.register_level("level_09", Level09)
     
     def _setup_event_handlers(self) -> None:
         """Set up event handlers."""
@@ -448,19 +460,25 @@ class Game:
                 if hasattr(entity, 'check_player_overlap'):
                     entity.check_player_overlap(self.player)
                 
-                # Enemy collision damage
+                # Enemy collision damage (with cooldown)
                 if entity.is_enemy and hasattr(entity, 'damage'):
-                    # Calculate knockback direction from enemy to player
-                    dx = self.player.x - entity.x
-                    dy = self.player.y - entity.y
-                    length = (dx * dx + dy * dy) ** 0.5
-                    if length > 0:
-                        knockback_dir = (dx / length, dy / length)
-                    else:
-                        knockback_dir = (1, 0)
+                    if not hasattr(entity, '_last_damage_time'):
+                        entity._last_damage_time = -ENEMY_ATTACK_COOLDOWN
                     
-                    damage = getattr(entity, 'damage', ENEMY_BASE_DAMAGE)
-                    self.player.take_damage(damage, knockback_dir)
+                    time_since_damage = self.current_level._elapsed - entity._last_damage_time
+                    if time_since_damage >= ENEMY_ATTACK_COOLDOWN:
+                        # Calculate knockback from enemy to player
+                        dx = self.player.x - entity.x
+                        dy = self.player.y - entity.y
+                        length = (dx * dx + dy * dy) ** 0.5
+                        if length > 0:
+                            knockback_dir = (dx / length, dy / length)
+                        else:
+                            knockback_dir = (1, 0)
+                        
+                        damage = getattr(entity, 'damage', ENEMY_BASE_DAMAGE)
+                        self.player.take_damage(damage, knockback_dir)
+                        entity._last_damage_time = self.current_level._elapsed
     
     def _check_attack_hits(self) -> None:
         """Check if player's attack hits any enemies."""

@@ -6,27 +6,26 @@ Features clean design with proper spacing and layout.
 """
 
 import pygame
-import math
 from typing import List, Callable, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from ..core.settings import SCREEN_WIDTH, SCREEN_HEIGHT
+from ..core.settings import SCREEN_WIDTH, SCREEN_HEIGHT, get_ui_font
 
 
 # =============================================================================
-# CLEAN THEME COLORS
+# BASIC THEME COLORS
 # =============================================================================
-THEME_BG_DARK = (20, 22, 30)
-THEME_BG_MEDIUM = (30, 32, 45)
-THEME_BG_PANEL = (25, 28, 40)
-THEME_ACCENT_PRIMARY = (100, 160, 255)  # Blue
-THEME_ACCENT_SECONDARY = (255, 180, 100)  # Orange/Gold
-THEME_ACCENT_SUCCESS = (100, 220, 130)  # Green
-THEME_ACCENT_DANGER = (255, 100, 100)  # Red
+THEME_BG_DARK = (18, 20, 24)
+THEME_BG_MEDIUM = (32, 36, 42)
+THEME_BG_PANEL = (26, 30, 36)
+THEME_ACCENT_PRIMARY = (90, 140, 210)
+THEME_ACCENT_SECONDARY = (180, 150, 95)
+THEME_ACCENT_SUCCESS = (95, 165, 110)
+THEME_ACCENT_DANGER = (190, 95, 95)
 THEME_TEXT_BRIGHT = (255, 255, 255)
-THEME_TEXT_DIM = (160, 160, 180)
-THEME_TEXT_DISABLED = (80, 80, 100)
+THEME_TEXT_DIM = (170, 175, 185)
+THEME_TEXT_DISABLED = (95, 100, 110)
 
 
 class MenuState(Enum):
@@ -67,13 +66,16 @@ class Menu:
         """Initialize the menu system."""
         pygame.font.init()
         
-        # Fonts - varied sizes for hierarchy
-        self._font_title = pygame.font.Font(None, 82)
-        self._font_subtitle = pygame.font.Font(None, 36)
-        self._font_large = pygame.font.Font(None, 42)
-        self._font_medium = pygame.font.Font(None, 32)
-        self._font_small = pygame.font.Font(None, 26)
-        self._font_tiny = pygame.font.Font(None, 22)
+        # Fonts
+        self._font_title = get_ui_font(74)
+        self._font_title_compact = get_ui_font(58)
+        self._font_subtitle = get_ui_font(32)
+        self._font_subtitle_compact = get_ui_font(24)
+        self._font_large = get_ui_font(40)
+        self._font_medium = get_ui_font(30)
+        self._font_small = get_ui_font(24)
+        self._font_tiny = get_ui_font(20)
+        self._font_micro = get_ui_font(14)
         
         # State
         self._state: MenuState = MenuState.MAIN
@@ -81,8 +83,7 @@ class Menu:
         self._selected_index: int = 0
         self._is_visible: bool = True
         
-        # Animation
-        self._pulse: float = 0.0
+        # Simple timer for minor UI updates
         self._time: float = 0.0
         
         # Mouse tracking
@@ -102,9 +103,9 @@ class Menu:
     def _setup_main_menu(self) -> None:
         """Set up main menu items - simple and clear."""
         self._items = [
-            MenuItem("▶  START GAME", self._on_play_clicked),
-            MenuItem("?  HOW TO PLAY", self._on_how_to_play_clicked),
-            MenuItem("✕  QUIT", self._on_quit_clicked),
+            MenuItem("START GAME", self._on_play_clicked),
+            MenuItem("HOW TO PLAY", self._on_how_to_play_clicked),
+            MenuItem("QUIT", self._on_quit_clicked),
         ]
         self._selected_index = 0
         self._update_selection()
@@ -112,7 +113,7 @@ class Menu:
     def _setup_how_to_play(self) -> None:
         """Set up how to play screen."""
         self._items = [
-            MenuItem("◄  BACK TO MENU", lambda: self.set_state(MenuState.MAIN)),
+            MenuItem("BACK TO MENU", lambda: self.set_state(MenuState.MAIN)),
         ]
         self._selected_index = 0
         self._update_selection()
@@ -120,9 +121,9 @@ class Menu:
     def _setup_pause_menu(self) -> None:
         """Set up pause menu items."""
         self._items = [
-            MenuItem("▶  RESUME", self._on_resume_clicked),
-            MenuItem("↺  RESTART LEVEL", self._on_restart_clicked),
-            MenuItem("⌂  MAIN MENU", self._on_main_menu_clicked),
+            MenuItem("RESUME", self._on_resume_clicked),
+            MenuItem("RESTART LEVEL", self._on_restart_clicked),
+            MenuItem("MAIN MENU", self._on_main_menu_clicked),
         ]
         self._selected_index = 0
         self._update_selection()
@@ -130,8 +131,8 @@ class Menu:
     def _setup_game_over(self) -> None:
         """Set up game over menu."""
         self._items = [
-            MenuItem("↺  TRY AGAIN", self._on_restart_clicked),
-            MenuItem("⌂  MAIN MENU", self._on_main_menu_clicked),
+            MenuItem("TRY AGAIN", self._on_restart_clicked),
+            MenuItem("MAIN MENU", self._on_main_menu_clicked),
         ]
         self._selected_index = 0
         self._update_selection()
@@ -139,9 +140,9 @@ class Menu:
     def _setup_level_complete(self) -> None:
         """Set up level complete menu."""
         self._items = [
-            MenuItem("▶  NEXT LEVEL", self._on_next_level_clicked),
-            MenuItem("↺  REPLAY", self._on_restart_clicked),
-            MenuItem("⌂  MAIN MENU", self._on_main_menu_clicked),
+            MenuItem("NEXT LEVEL", self._on_next_level_clicked),
+            MenuItem("REPLAY", self._on_restart_clicked),
+            MenuItem("MAIN MENU", self._on_main_menu_clicked),
         ]
         self._selected_index = 0
         self._update_selection()
@@ -274,11 +275,8 @@ class Menu:
                 item.hover = False
     
     def update(self, dt: float) -> None:
-        """Update menu animations."""
-        self._pulse += dt * 3.0
+        """Update menu timer."""
         self._time += dt
-        if self._pulse > 6.28:
-            self._pulse -= 6.28
     
     def render(self, surface: pygame.Surface) -> None:
         """Render the menu with clean design."""
@@ -301,24 +299,17 @@ class Menu:
         self._draw_controls_hint(surface)
     
     def _draw_background(self, surface: pygame.Surface) -> None:
-        """Draw gradient background."""
-        # Vertical gradient
-        for y in range(SCREEN_HEIGHT):
-            progress = y / SCREEN_HEIGHT
-            r = int(20 + progress * 10)
-            g = int(22 + progress * 10)
-            b = int(35 + progress * 15)
-            pygame.draw.line(surface, (r, g, b), (0, y), (SCREEN_WIDTH, y))
+        """Draw a plain background panel."""
+        surface.fill(THEME_BG_DARK)
+
+        panel = pygame.Rect(24, 24, SCREEN_WIDTH - 48, SCREEN_HEIGHT - 48)
+        pygame.draw.rect(surface, THEME_BG_PANEL, panel)
+        pygame.draw.rect(surface, THEME_BG_MEDIUM, panel, 2)
     
     def _draw_borders(self, surface: pygame.Surface) -> None:
-        """Draw simple border lines."""
-        border_color = THEME_ACCENT_PRIMARY
-        
-        # Top border
-        pygame.draw.line(surface, border_color, (60, 30), (SCREEN_WIDTH - 60, 30), 2)
-        # Bottom border
-        pygame.draw.line(surface, border_color, (60, SCREEN_HEIGHT - 30), 
-                        (SCREEN_WIDTH - 60, SCREEN_HEIGHT - 30), 2)
+        """Draw simple horizontal separators."""
+        pygame.draw.line(surface, THEME_BG_MEDIUM, (40, 110), (SCREEN_WIDTH - 40, 110), 1)
+        pygame.draw.line(surface, THEME_BG_MEDIUM, (40, SCREEN_HEIGHT - 70), (SCREEN_WIDTH - 40, SCREEN_HEIGHT - 70), 1)
     
     def _draw_standard_menu(self, surface: pygame.Surface) -> None:
         """Draw standard menu with title and buttons."""
@@ -329,75 +320,74 @@ class Menu:
         self._draw_menu_items(surface)
     
     def _draw_title(self, surface: pygame.Surface) -> None:
-        """Draw title."""
+        """Draw title and subtitle."""
         title_text = self._get_title()
         subtitle_text = self._get_subtitle()
+
+        title_font = self._font_title
+        subtitle_font = self._font_subtitle
+        subtitle_gap = 18
+
+        if self._state == MenuState.MAIN:
+            subtitle_gap = 35
+        elif self._state == MenuState.LEVEL_COMPLETE:
+            title_font = self._font_title_compact
+            subtitle_font = self._font_subtitle_compact
+            subtitle_gap = 14
         
-        # Calculate positions
-        title_y = 80
-        
-        # Main title
-        title = self._font_title.render(title_text, True, THEME_TEXT_BRIGHT)
+        title_y = 64
+        title = title_font.render(title_text, True, THEME_TEXT_BRIGHT)
         title_x = (SCREEN_WIDTH - title.get_width()) // 2
         surface.blit(title, (title_x, title_y))
+
+        line_y = title_y + title.get_height() + 10
+        pygame.draw.line(
+            surface,
+            THEME_ACCENT_SECONDARY,
+            (SCREEN_WIDTH // 2 - 90, line_y),
+            (SCREEN_WIDTH // 2 + 90, line_y),
+            2,
+        )
         
         # Subtitle
         if subtitle_text:
-            subtitle = self._font_subtitle.render(subtitle_text, True, THEME_TEXT_DIM)
+            subtitle = subtitle_font.render(subtitle_text, True, THEME_TEXT_DIM)
             subtitle_x = (SCREEN_WIDTH - subtitle.get_width()) // 2
-            surface.blit(subtitle, (subtitle_x, title_y + 75))
-        
-        # Decorative line under title
-        line_y = title_y + 110
-        line_width = 250
-        line_x = (SCREEN_WIDTH - line_width) // 2
-        pygame.draw.line(surface, THEME_ACCENT_SECONDARY, 
-                        (line_x, line_y), (line_x + line_width, line_y), 2)
+            subtitle_y = line_y + subtitle_gap
+            surface.blit(subtitle, (subtitle_x, subtitle_y))
     
     def _draw_menu_items(self, surface: pygame.Surface) -> None:
-        """Draw menu items with clean styling."""
-        btn_width = 300
-        btn_height = 55
-        btn_spacing = 18
-        
-        # Position buttons in center-bottom area
-        total_height = len(self._items) * (btn_height + btn_spacing) - btn_spacing
+        """Draw simple menu buttons."""
+        if self._state == MenuState.MAIN:
+            btn_width = 440
+            btn_height = 62
+        else:
+            btn_width = 300
+            btn_height = 50
+        btn_spacing = 14
+
         start_y = SCREEN_HEIGHT // 2 + 50
         
         for i, item in enumerate(self._items):
             x = (SCREEN_WIDTH - btn_width) // 2
             y = start_y + i * (btn_height + btn_spacing)
             
-            # Store rect for click detection
             rect = pygame.Rect(x, y, btn_width, btn_height)
             item.rect = rect
             
-            # Determine colors based on state
             if not item.enabled:
                 bg_color = THEME_BG_MEDIUM
                 border_color = THEME_TEXT_DISABLED
                 text_color = THEME_TEXT_DISABLED
-            elif item.selected or item.hover:
-                bg_color = (40, 50, 70)
-                border_color = THEME_ACCENT_PRIMARY
-                text_color = THEME_TEXT_BRIGHT
             else:
-                bg_color = (30, 35, 50)
-                border_color = (60, 65, 85)
-                text_color = THEME_TEXT_DIM
+                selected = item.selected or item.hover
+                bg_color = (40, 48, 58) if selected else THEME_BG_MEDIUM
+                border_color = THEME_ACCENT_PRIMARY if selected else (80, 90, 105)
+                text_color = THEME_TEXT_BRIGHT if selected else THEME_TEXT_DIM
             
-            # Button background
-            pygame.draw.rect(surface, bg_color, rect, border_radius=10)
+            pygame.draw.rect(surface, bg_color, rect)
+            pygame.draw.rect(surface, border_color, rect, 2)
             
-            # Border
-            pygame.draw.rect(surface, border_color, rect, 2, border_radius=10)
-            
-            # Selection indicator
-            if item.selected or item.hover:
-                indicator = pygame.Rect(x - 5, y + 18, 3, btn_height - 36)
-                pygame.draw.rect(surface, THEME_ACCENT_PRIMARY, indicator)
-            
-            # Item text (centered)
             text = self._font_large.render(item.label, True, text_color)
             text_x = x + (btn_width - text.get_width()) // 2
             text_y = y + (btn_height - text.get_height()) // 2
@@ -405,8 +395,8 @@ class Menu:
     
     def _draw_controls_hint(self, surface: pygame.Surface) -> None:
         """Draw control hints at bottom."""
-        hint = "Arrow Keys / Mouse: Navigate  |  ENTER / Click: Select  |  ESC: Back"
-        text = self._font_tiny.render(hint, True, THEME_TEXT_DIM)
+        hint = "Arrow keys or mouse to move, Enter/click to select, Esc to go back"
+        text = self._font_micro.render(hint, True, THEME_TEXT_DIM)
         x = (SCREEN_WIDTH - text.get_width()) // 2
         y = SCREEN_HEIGHT - 50
         surface.blit(text, (x, y))
@@ -418,7 +408,7 @@ class Menu:
     def _draw_how_to_play(self, surface: pygame.Surface) -> None:
         """Draw the how to play/tutorial screen with proper layout."""
         # Title at top
-        title = self._font_title.render("HOW TO PLAY", True, THEME_TEXT_BRIGHT)
+        title = self._font_large.render("HOW TO PLAY", True, THEME_TEXT_BRIGHT)
         title_x = (SCREEN_WIDTH - title.get_width()) // 2
         surface.blit(title, (title_x, 45))
         
@@ -477,7 +467,7 @@ class Menu:
         # Tip box at bottom
         tip_y = bottom_y + 155
         tip_text = "TIP: If a path is blocked, try switching to another universe!"
-        tip = self._font_small.render(tip_text, True, THEME_ACCENT_SUCCESS)
+        tip = self._font_tiny.render(tip_text, True, THEME_ACCENT_SUCCESS)
         tip_x = (SCREEN_WIDTH - tip.get_width()) // 2
         
         # Tip background
@@ -504,7 +494,7 @@ class Menu:
         pygame.draw.rect(surface, bg_color, item.rect, border_radius=10)
         pygame.draw.rect(surface, border_color, item.rect, 2, border_radius=10)
         
-        text = self._font_large.render(item.label, True, text_color)
+        text = self._font_medium.render(item.label, True, text_color)
         text_x = btn_x + (btn_width - text.get_width()) // 2
         text_y = btn_y + (btn_height - text.get_height()) // 2
         surface.blit(text, (text_x, text_y))
@@ -528,17 +518,17 @@ class Menu:
         surface.blit(title_bar, (x, y))
         
         # Title text
-        title_surf = self._font_medium.render(title, True, accent_color)
+        title_surf = self._font_small.render(title, True, accent_color)
         title_x = x + (width - title_surf.get_width()) // 2
         surface.blit(title_surf, (title_x, y + 8))
         
         # Content items
         content_y = y + title_bar_height + 12
-        item_height = 26
+        item_height = 24
         
         for key, value in items:
             # Key (left side)
-            key_surf = self._font_small.render(key, True, THEME_ACCENT_PRIMARY)
+            key_surf = self._font_tiny.render(key, True, THEME_ACCENT_PRIMARY)
             surface.blit(key_surf, (x + 18, content_y))
             
             # Value (right side, or offset for wide panel)
@@ -547,7 +537,7 @@ class Menu:
             else:
                 value_x = x + 140
             
-            value_surf = self._font_small.render(value, True, THEME_TEXT_DIM)
+            value_surf = self._font_tiny.render(value, True, THEME_TEXT_DIM)
             surface.blit(value_surf, (value_x, content_y))
             
             content_y += item_height
@@ -570,7 +560,7 @@ class Menu:
     def _get_subtitle(self) -> str:
         """Get subtitle based on state."""
         if self._state == MenuState.MAIN:
-            return "[ C A U S A L I T Y ]"
+            return "A simple multiverse puzzle game"
         elif self._state == MenuState.GAME_OVER:
             return "The paradox has consumed all timelines."
         elif self._state == MenuState.LEVEL_COMPLETE:

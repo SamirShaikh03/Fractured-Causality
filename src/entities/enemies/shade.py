@@ -16,20 +16,7 @@ from ...core.events import EventSystem, GameEvent
 
 
 class Shade(Entity):
-    """
-    A Shade is an enemy that exists because of a causal origin.
-    
-    For example, a Shade might exist because a tree casts a shadow.
-    If that tree is destroyed in another universe, the Shade
-    ceases to exist - it was never born.
-    
-    Shades:
-    - Patrol a set path
-    - Block the player's progress
-    - Cannot be killed directly
-    - Are defeated by destroying their causal origin
-    - Generate paradox if orphaned (origin destroyed but shade persists)
-    """
+    """Enemy bound to a causal origin. Defeated by destroying their origin."""
     
     def __init__(self, position: Tuple[float, float],
                  origin_id: str = None,
@@ -37,17 +24,7 @@ class Shade(Entity):
                  shade_id: str = None,
                  causal_origin_id: str = None,
                  patrol_points: List[Tuple[float, float]] = None):
-        """
-        Initialize a Shade.
-        
-        Args:
-            position: Starting position
-            origin_id: ID of the causal origin entity (alias: causal_origin_id)
-            patrol_path: List of positions to patrol between (alias: patrol_points)
-            shade_id: Optional ID for this shade (for entity_id)
-            causal_origin_id: Alias for origin_id
-            patrol_points: Alias for patrol_path
-        """
+        """Initialize a Shade."""
         config = EntityConfig(
             position=position,
             size=(TILE_SIZE - 8, TILE_SIZE - 8),

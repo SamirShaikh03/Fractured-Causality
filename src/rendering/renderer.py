@@ -9,7 +9,7 @@ from typing import List, Tuple, Optional
 
 from ..core.settings import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE,
-    COLOR_PRIME, COLOR_ECHO, COLOR_FRACTURE
+    COLOR_PRIME, COLOR_ECHO, COLOR_FRACTURE, get_ui_font
 )
 from ..multiverse.universe import Universe, UniverseType, TileType
 from ..systems.camera import Camera
@@ -50,13 +50,18 @@ class Renderer:
             (SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA
         )
         
-        # Tile colors
+        # Tile colors - richer palette
         self._tile_colors = {
-            TileType.FLOOR: (60, 60, 70),
-            TileType.WALL: (40, 40, 50),
-            TileType.PIT: (20, 20, 30),
-            TileType.HAZARD: (80, 40, 40),
+            TileType.FLOOR: (55, 58, 68),
+            TileType.WALL: (35, 37, 48),
+            TileType.PIT: (15, 15, 22),
+            TileType.HAZARD: (75, 35, 35),
         }
+        
+        # Wall detail colors
+        self._wall_highlight = (50, 52, 65)
+        self._wall_shadow = (25, 26, 35)
+        self._floor_accent = (48, 50, 60)
         
         # Universe tints
         self._universe_tints = {
@@ -70,7 +75,7 @@ class Renderer:
         
         # Font for debug
         pygame.font.init()
-        self._debug_font = pygame.font.Font(None, 20)
+        self._debug_font = get_ui_font(20)
     
     def clear(self) -> None:
         """Clear all layers."""
@@ -121,9 +126,32 @@ class Renderer:
                 tile_rect = pygame.Rect(screen_x, screen_y, TILE_SIZE, TILE_SIZE)
                 pygame.draw.rect(self._background_layer, color, tile_rect)
                 
-                # Draw tile border for visual clarity
-                border_color = tuple(max(0, c - 15) for c in color)
-                pygame.draw.rect(self._background_layer, border_color, tile_rect, 1)
+                # Subtle grid lines for floor tiles
+                if tile_type == TileType.FLOOR:
+                    border_color = tuple(max(0, c - 10) for c in color)
+                    pygame.draw.rect(self._background_layer, border_color, tile_rect, 1)
+                    # Small corner accent for visual texture
+                    accent = tuple(min(255, c + 8) for c in color)
+                    pygame.draw.line(self._background_layer, accent,
+                                   (screen_x + 1, screen_y + 1),
+                                   (screen_x + 4, screen_y + 1), 1)
+                elif tile_type == TileType.WALL:
+                    # 3D-ish wall: highlight top-left, shadow bottom-right
+                    pygame.draw.line(self._background_layer, self._wall_highlight,
+                                   (screen_x, screen_y),
+                                   (screen_x + TILE_SIZE - 1, screen_y), 1)
+                    pygame.draw.line(self._background_layer, self._wall_highlight,
+                                   (screen_x, screen_y),
+                                   (screen_x, screen_y + TILE_SIZE - 1), 1)
+                    pygame.draw.line(self._background_layer, self._wall_shadow,
+                                   (screen_x + TILE_SIZE - 1, screen_y + 1),
+                                   (screen_x + TILE_SIZE - 1, screen_y + TILE_SIZE - 1), 1)
+                    pygame.draw.line(self._background_layer, self._wall_shadow,
+                                   (screen_x + 1, screen_y + TILE_SIZE - 1),
+                                   (screen_x + TILE_SIZE - 1, screen_y + TILE_SIZE - 1), 1)
+                else:
+                    border_color = tuple(max(0, c - 15) for c in color)
+                    pygame.draw.rect(self._background_layer, border_color, tile_rect, 1)
                 
                 # Special tile effects
                 if tile_type == TileType.PIT:

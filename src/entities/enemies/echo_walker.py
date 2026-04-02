@@ -18,35 +18,12 @@ from ...core.events import EventSystem, GameEvent
 
 
 class EchoWalker(Entity):
-    """
-    Echo Walker - A being that exists in multiple universes at once.
-    
-    Echo Walkers copy the player's movements with a time delay.
-    When the player moves in Universe A, the Echo Walker in Universe B
-    will mirror that movement a few seconds later.
-    
-    This creates a puzzle element where players must think ahead:
-    "If I move here now, where will the Echo Walker be when I switch?"
-    
-    Echo Walkers:
-    - Exist in all universes (ANCHORED)
-    - Mirror player movement with delay
-    - Block paths in other universes
-    - Can be "confused" by paradox (erratic behavior)
-    - Defeated by creating a paradox in their existence pattern
-    """
+    """Enemy that mirrors player movement with a delay across universes."""
     
     def __init__(self, position: Tuple[float, float],
                  echo_delay: float = 2.0,
                  home_universe: UniverseType = UniverseType.ECHO):
-        """
-        Initialize an Echo Walker.
-        
-        Args:
-            position: Starting position
-            echo_delay: Seconds of delay before copying player movement
-            home_universe: The universe this walker is most "real" in
-        """
+        """Initialize an Echo Walker."""
         config = EntityConfig(
             position=position,
             size=(TILE_SIZE - 12, TILE_SIZE - 12),

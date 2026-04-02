@@ -21,7 +21,7 @@ from ..core.settings import (
     KEY_SWITCH_PRIME, KEY_SWITCH_ECHO, KEY_SWITCH_FRACTURE,
     UNIVERSE_SWITCH_COOLDOWN, TILE_SIZE,
     PLAYER_MAX_HEALTH, PLAYER_ATTACK_DAMAGE, PLAYER_ATTACK_RANGE,
-    PLAYER_ATTACK_COOLDOWN, PLAYER_INVINCIBILITY_TIME
+    PLAYER_ATTACK_COOLDOWN, PLAYER_INVINCIBILITY_TIME, get_ui_font
 )
 from ..core.events import EventSystem, GameEvent
 from ..multiverse.universe import UniverseType
@@ -77,6 +77,7 @@ class Player(Entity):
         
         # Interaction
         self.nearby_interactive: Optional[Entity] = None
+        self.keys_collected: int = 0
         
         # Animation
         self.animation_state: str = "idle"
@@ -519,7 +520,7 @@ class Player(Entity):
         render_x = int(self.x - ox)
         render_y = int(self.y - oy)
         
-        # Phasing effect
+        # Phasing effect 
         if self.is_phasing:
             # Draw ghost trail
             ghost = self.sprite.copy()
@@ -577,7 +578,7 @@ class Player(Entity):
                                    rx: int, ry: int) -> None:
         """Render the interaction prompt."""
         # Draw [E] above player
-        font = pygame.font.Font(None, 24)
+        font = get_ui_font(24)
         text = font.render("[E]", True, (255, 255, 255))
         text_rect = text.get_rect(center=(rx + self.width // 2, ry - 15))
         

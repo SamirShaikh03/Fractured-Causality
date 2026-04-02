@@ -107,9 +107,10 @@ class Key(Entity):
             return False
         
         self.is_collected = True
-        self.visible = False
         self.exists = False
-        
+        if not hasattr(player, "keys_collected"):
+            player.keys_collected = 0
+        player.keys_collected += 1
         # Add to player inventory (if they have one)
         if hasattr(player, 'inventory'):
             player.inventory.add(self.entity_id)
@@ -124,6 +125,11 @@ class Key(Entity):
             "door_id": self.door_id
         })
         
+        EventSystem.emit(GameEvent.ITEM_COLLECTED, {
+            "item_type": "key",
+            "entity_id": self.entity_id,
+            "door_id": self.door_id
+        })
         return True
     
     def on_interact(self, player) -> bool:

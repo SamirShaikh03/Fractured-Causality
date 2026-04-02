@@ -6,27 +6,26 @@ Features a cyberpunk/neon aesthetic.
 """
 
 import pygame
-import math
-from typing import List, Tuple, Optional
-from dataclasses import dataclass, field
+from typing import List, Tuple
+from dataclasses import dataclass
 import time
 
 from ..core.settings import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, 
-    COLOR_PRIME, COLOR_ECHO, COLOR_FRACTURE,
+    SCREEN_WIDTH, SCREEN_HEIGHT,
+    COLOR_PRIME,
     PARADOX_STABLE, PARADOX_UNSTABLE, PARADOX_CRITICAL,
-    PLAYER_MAX_HEALTH
+    PLAYER_MAX_HEALTH,
+    get_ui_font
 )
 from ..core.events import EventSystem, GameEvent
 
 
-# Cyberpunk theme colors
-HUD_NEON_CYAN = (0, 255, 255)
-HUD_NEON_MAGENTA = (255, 0, 128)
-HUD_NEON_GOLD = (255, 215, 0)
-HUD_BG_DARK = (16, 16, 32)
+# Basic HUD colors
+HUD_CYAN = (95, 180, 220)
+HUD_GOLD = (190, 165, 95)
+HUD_BG_DARK = (20, 24, 30)
 HUD_TEXT_BRIGHT = (255, 255, 255)
-HUD_TEXT_DIM = (140, 140, 160)
+HUD_TEXT_DIM = (165, 170, 180)
 
 
 @dataclass
@@ -55,9 +54,10 @@ class HUD:
         """Initialize the HUD."""
         # Font initialization
         pygame.font.init()
-        self._font_large = pygame.font.Font(None, 36)
-        self._font_medium = pygame.font.Font(None, 28)
-        self._font_small = pygame.font.Font(None, 22)
+        self._font_large = get_ui_font(36)
+        self._font_medium = get_ui_font(28)
+        self._font_small = get_ui_font(22)
+        self._font_tiny = get_ui_font(16)
         
         # State
         self._paradox_level: float = 0.0
@@ -139,83 +139,57 @@ class HUD:
         self._render_controls_reminder(surface)
     
     def _render_paradox_meter(self, surface: pygame.Surface) -> None:
-        """Render the paradox meter with cyberpunk styling."""
+        """Render a basic paradox meter."""
         x, y = 20, 20
         width, height = 220, 28
-        
-        # Outer glow/border
-        glow_rect = pygame.Rect(x - 3, y - 3, width + 6, height + 6)
-        pygame.draw.rect(surface, (30, 30, 50), glow_rect, border_radius=6)
-        
-        # Background
+
         bg_rect = pygame.Rect(x, y, width, height)
-        pygame.draw.rect(surface, HUD_BG_DARK, bg_rect, border_radius=4)
-        
-        # Fill based on paradox level
+        pygame.draw.rect(surface, HUD_BG_DARK, bg_rect)
+
         fill_width = int((width - 4) * (self._paradox_level / 100))
-        
-        # Color gradient based on level
+
         if self._paradox_level < PARADOX_STABLE:
-            color = HUD_NEON_CYAN  # Cyan - stable
+            color = HUD_CYAN
         elif self._paradox_level < PARADOX_UNSTABLE:
-            color = HUD_NEON_GOLD  # Gold - unstable
+            color = HUD_GOLD
         elif self._paradox_level < PARADOX_CRITICAL:
-            color = (255, 128, 0)  # Orange - critical
+            color = (200, 125, 70)
         else:
-            # Pulsing magenta/red for collapse
-            pulse = abs(math.sin(self._paradox_pulse))
-            color = (200 + int(55 * pulse), int(50 * (1 - pulse)), int(80 * (1 - pulse)))
-        
+            color = (200, 75, 75)
+
         if fill_width > 0:
             fill_rect = pygame.Rect(x + 2, y + 2, fill_width, height - 4)
-            pygame.draw.rect(surface, color, fill_rect, border_radius=2)
-            
-            # Scanline effect
-            for i in range(0, fill_width, 4):
-                pygame.draw.line(surface, (*color[:3], 100), 
-                               (x + 2 + i, y + 2), (x + 2 + i, y + height - 3))
-        
-        # Neon border
-        border_color = color if self._paradox_level > 0 else HUD_NEON_CYAN
-        pygame.draw.rect(surface, border_color, bg_rect, 2, border_radius=4)
-        
-        # Label with glow
+            pygame.draw.rect(surface, color, fill_rect)
+
+        border_color = color if self._paradox_level > 0 else HUD_CYAN
+        pygame.draw.rect(surface, border_color, bg_rect, 2)
+
         label = self._font_small.render("PARADOX", True, HUD_TEXT_DIM)
         surface.blit(label, (x + 6, y + 6))
-        
-        # Percentage with neon effect
+
         pct_text = f"{int(self._paradox_level)}%"
         pct = self._font_medium.render(pct_text, True, HUD_TEXT_BRIGHT)
         surface.blit(pct, (x + width - pct.get_width() - 8, y + 4))
     
     def _render_health_bar(self, surface: pygame.Surface) -> None:
         """Render the player health bar."""
-        # Position on the right side of screen
         x = SCREEN_WIDTH - 240
         y = 20
         width, height = 220, 28
-        
-        # Outer glow/border
-        glow_rect = pygame.Rect(x - 3, y - 3, width + 6, height + 6)
-        pygame.draw.rect(surface, (30, 30, 50), glow_rect, border_radius=6)
-        
-        # Background
+
         bg_rect = pygame.Rect(x, y, width, height)
-        pygame.draw.rect(surface, HUD_BG_DARK, bg_rect, border_radius=4)
-        
-        # Calculate fill width
+        pygame.draw.rect(surface, HUD_BG_DARK, bg_rect)
+
         health_pct = self._player_health / self._player_max_health if self._player_max_health > 0 else 0
         fill_width = int((width - 4) * health_pct)
-        
-        # Color based on health level
+
         if health_pct > 0.6:
-            color = (50, 220, 100)  # Green - healthy
+            color = (75, 180, 100)
         elif health_pct > 0.3:
-            color = HUD_NEON_GOLD  # Gold - caution
+            color = HUD_GOLD
         else:
-            color = (220, 50, 50)  # Red - danger
-        
-        # Flash red when damaged
+            color = (190, 80, 80)
+
         if self._health_flash > 0:
             flash_intensity = self._health_flash
             color = (
@@ -223,158 +197,104 @@ class HUD:
                 int(color[1] * (1 - flash_intensity * 0.5)),
                 int(color[2] * (1 - flash_intensity * 0.5))
             )
-        
+
         if fill_width > 0:
             fill_rect = pygame.Rect(x + 2, y + 2, fill_width, height - 4)
-            pygame.draw.rect(surface, color, fill_rect, border_radius=2)
-            
-            # Scanline effect
-            for i in range(0, fill_width, 4):
-                pygame.draw.line(surface, (*color[:3], 100), 
-                               (x + 2 + i, y + 2), (x + 2 + i, y + height - 3))
-        
-        # Neon border
+            pygame.draw.rect(surface, color, fill_rect)
+
         border_color = color if health_pct > 0 else (100, 100, 100)
-        pygame.draw.rect(surface, border_color, bg_rect, 2, border_radius=4)
-        
-        # Label
+        pygame.draw.rect(surface, border_color, bg_rect, 2)
+
         label = self._font_small.render("HEALTH", True, HUD_TEXT_DIM)
         surface.blit(label, (x + 6, y + 6))
-        
-        # Health value
+
         hp_text = f"{self._player_health}/{self._player_max_health}"
         hp = self._font_medium.render(hp_text, True, HUD_TEXT_BRIGHT)
         surface.blit(hp, (x + width - hp.get_width() - 8, y + 4))
     
     def _render_key_counter(self, surface: pygame.Surface) -> None:
-        """Render the key counter with neon styling."""
+        """Render a basic key counter."""
         x, y = 20, 58
-        
-        # Background panel
-        panel_rect = pygame.Rect(x - 4, y - 4, 100, 32)
-        pygame.draw.rect(surface, HUD_BG_DARK, panel_rect, border_radius=4)
-        pygame.draw.rect(surface, HUD_NEON_GOLD, panel_rect, 1, border_radius=4)
-        
-        # Key icon (diamond shape)
-        icon_surface = pygame.Surface((20, 20), pygame.SRCALPHA)
-        pygame.draw.polygon(icon_surface, HUD_NEON_GOLD, [
-            (10, 0), (20, 10), (10, 20), (0, 10)
-        ])
-        pygame.draw.circle(icon_surface, (40, 40, 40), (10, 10), 4)
-        pygame.draw.circle(icon_surface, HUD_NEON_GOLD, (10, 10), 2)
-        
-        surface.blit(icon_surface, (x, y))
-        
-        # Count with glow
-        count_text = f"{self._keys_collected}/{self._keys_required}"
-        count = self._font_medium.render(count_text, True, HUD_TEXT_BRIGHT)
-        surface.blit(count, (x + 26, y + 1))
+
+        panel_rect = pygame.Rect(x - 4, y - 2, 170, 28)
+        pygame.draw.rect(surface, HUD_BG_DARK, panel_rect)
+        pygame.draw.rect(surface, HUD_GOLD, panel_rect, 1)
+
+        text = self._font_medium.render(
+            f"KEYS {self._keys_collected}/{self._keys_required}",
+            True,
+            HUD_TEXT_BRIGHT,
+        )
+        surface.blit(text, (x + 6, y))
     
     def _render_universe_indicator(self, surface: pygame.Surface) -> None:
-        """Render the current universe indicator with cyberpunk styling."""
-        x = SCREEN_WIDTH - 160
-        y = 20
-        width, height = 140, 40
-        
-        # Background with universe color tint
+        """Render a basic universe indicator."""
+        width, height = 170, 30
+        x = (SCREEN_WIDTH - width) // 2
+        y = 18
+
         bg_color = tuple(int(c * 0.2) for c in self._universe_color)
         bg_rect = pygame.Rect(x, y, width, height)
-        pygame.draw.rect(surface, bg_color, bg_rect, border_radius=6)
-        
-        # Inner darker area
-        inner_rect = pygame.Rect(x + 2, y + 2, width - 4, height - 4)
-        pygame.draw.rect(surface, HUD_BG_DARK, inner_rect, border_radius=4)
-        
-        # Flash on switch
-        if self._universe_flash > 0:
-            flash_alpha = int(150 * self._universe_flash)
-            flash_surface = pygame.Surface((width, height), pygame.SRCALPHA)
-            flash_surface.fill((*self._universe_color, flash_alpha))
-            surface.blit(flash_surface, (x, y))
-        
-        # Neon border with glow
-        pygame.draw.rect(surface, self._universe_color, bg_rect, 2, border_radius=6)
-        
-        # Universe symbol (geometric shape)
-        symbol_x = x + 12
-        symbol_y = y + height // 2
-        if self._current_universe == "PRIME":
-            # Circle for Prime
-            pygame.draw.circle(surface, self._universe_color, (symbol_x, symbol_y), 8, 2)
-        elif self._current_universe == "ECHO":
-            # Double circle for Echo
-            pygame.draw.circle(surface, self._universe_color, (symbol_x - 4, symbol_y), 6, 2)
-            pygame.draw.circle(surface, self._universe_color, (symbol_x + 4, symbol_y), 6, 2)
-        else:
-            # Triangle for Fracture
-            points = [(symbol_x, symbol_y - 8), (symbol_x - 7, symbol_y + 5), (symbol_x + 7, symbol_y + 5)]
-            pygame.draw.polygon(surface, self._universe_color, points, 2)
-        
-        # Label
-        label = self._font_medium.render(self._current_universe, True, self._universe_color)
-        label_x = x + 30
+        pygame.draw.rect(surface, bg_color, bg_rect)
+        pygame.draw.rect(surface, self._universe_color, bg_rect, 2)
+
+        label = self._font_medium.render(f"UNIVERSE: {self._current_universe}", True, self._universe_color)
+        label_x = x + (width - label.get_width()) // 2
         label_y = y + (height - label.get_height()) // 2
         surface.blit(label, (label_x, label_y))
     
     def _render_causal_sight_indicator(self, surface: pygame.Surface) -> None:
-        """Render the causal sight indicator."""
+        """Render causal sight status text."""
         if not self._causal_sight_active:
             return
-        
-        x = SCREEN_WIDTH - 150
-        y = 62
-        
-        # Eye icon
-        icon_surface = pygame.Surface((24, 24), pygame.SRCALPHA)
-        pygame.draw.ellipse(icon_surface, (180, 180, 255), (0, 4, 24, 16))
-        pygame.draw.circle(icon_surface, (80, 80, 200), (12, 12), 6)
-        pygame.draw.circle(icon_surface, (40, 40, 100), (12, 12), 3)
-        
-        surface.blit(icon_surface, (x, y))
-        
-        # Label
-        label = self._font_small.render("CAUSAL SIGHT", True, (180, 180, 255))
-        surface.blit(label, (x + 28, y + 4))
+
+        label = self._font_small.render("CAUSAL SIGHT ON", True, (180, 190, 220))
+        width = label.get_width() + 16
+        height = 24
+        x = (SCREEN_WIDTH - width) // 2
+        y = 56
+
+        rect = pygame.Rect(x, y, width, height)
+        pygame.draw.rect(surface, HUD_BG_DARK, rect)
+        pygame.draw.rect(surface, (120, 130, 165), rect, 1)
+        surface.blit(label, (x + 8, y + (height - label.get_height()) // 2))
     
     def _render_messages(self, surface: pygame.Surface) -> None:
-        """Render status messages."""
+        """Render status messages as plain text with simple boxes."""
         x = SCREEN_WIDTH // 2
         y = SCREEN_HEIGHT - 100
         
+        type_colors = {
+            "info": (200, 200, 200),
+            "warning": (255, 200, 80),
+            "success": (80, 255, 120),
+            "causal": (160, 170, 255),
+            "error": (255, 90, 90),
+        }
+        type_accents = {
+            "info": (120, 140, 160),
+            "warning": (180, 140, 40),
+            "success": (50, 180, 80),
+            "causal": (110, 110, 200),
+            "error": (180, 50, 50),
+        }
+        
         for i, message in enumerate(self._messages):
-            # Get message color
-            if message.type == "info":
-                color = (200, 200, 200)
-            elif message.type == "warning":
-                color = (255, 200, 80)
-            elif message.type == "success":
-                color = (80, 255, 80)
-            elif message.type == "causal":
-                color = (180, 180, 255)
-            elif message.type == "error":
-                color = (255, 80, 80)
-            else:
-                color = (200, 200, 200)
+            color = type_colors.get(message.type, (200, 200, 200))
             
-            # Render with alpha
             text = self._font_medium.render(message.text, True, color)
             text.set_alpha(int(message.alpha))
             
-            # Center horizontally
             text_x = x - text.get_width() // 2
-            text_y = y - i * 28
+            text_y = y - i * 32
             
-            # Background
-            bg_rect = pygame.Rect(
-                text_x - 10, text_y - 2,
-                text.get_width() + 20, text.get_height() + 4
-            )
-            bg_surface = pygame.Surface(
-                (bg_rect.width, bg_rect.height), 
-                pygame.SRCALPHA
-            )
-            bg_surface.fill((0, 0, 0, int(message.alpha * 0.5)))
-            surface.blit(bg_surface, (bg_rect.x, bg_rect.y))
+            bg_w = text.get_width() + 16
+            bg_h = text.get_height() + 6
+            bg_surface = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
+            pygame.draw.rect(bg_surface, (16, 18, 24, int(message.alpha * 0.65)), (0, 0, bg_w, bg_h))
+            border = type_accents.get(message.type, (120, 120, 120))
+            pygame.draw.rect(bg_surface, (*border, int(message.alpha * 0.45)), (0, 0, bg_w, bg_h), 1)
+            surface.blit(bg_surface, (text_x - 8, text_y - 3))
             
             surface.blit(text, (text_x, text_y))
     
@@ -452,24 +372,9 @@ class HUD:
         EventSystem.unsubscribe(GameEvent.PLAYER_HEALED, self._on_player_healed)
     
     def _render_controls_reminder(self, surface: pygame.Surface) -> None:
-        """Render a subtle controls reminder at the bottom of the screen."""
-        # Context-sensitive controls
-        controls_left = "WASD: Move"
-        controls_mid = "SPACE: Switch Universe  |  E: Interact  |  F: Attack"
-        controls_right = "TAB: Causal Sight  |  ESC: Pause"
-        
-        full_text = f"{controls_left}  |  {controls_mid}  |  {controls_right}"
-        
-        # Render with subtle styling
-        text = self._font_small.render(full_text, True, HUD_TEXT_DIM)
+        """Render a plain controls reminder."""
+        hint = "WASD Move | Space Switch | E Interact | F Attack | Tab Sight | Esc Pause"
+        text = self._font_tiny.render(hint, True, HUD_TEXT_DIM)
         x = (SCREEN_WIDTH - text.get_width()) // 2
-        y = SCREEN_HEIGHT - 25
-        
-        # Dark background for readability
-        bg_rect = pygame.Rect(x - 12, y - 4, text.get_width() + 24, text.get_height() + 8)
-        bg_surface = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
-        bg_surface.fill((0, 0, 0, 100))
-        pygame.draw.rect(bg_surface, (60, 60, 80, 80), (0, 0, bg_rect.width, bg_rect.height), 1, border_radius=6)
-        surface.blit(bg_surface, (bg_rect.x, bg_rect.y))
-        
+        y = SCREEN_HEIGHT - 26
         surface.blit(text, (x, y))

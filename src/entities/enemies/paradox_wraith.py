@@ -18,31 +18,11 @@ from ...core.events import EventSystem, GameEvent
 
 
 class ParadoxWraith(Entity):
-    """
-    Paradox Wraith - A creature born from broken causality.
-    
-    These entities only manifest when paradox exceeds a threshold.
-    They hunt the player, and touching one forces a brief
-    "ejection" from the current universe.
-    
-    Paradox Wraiths:
-    - Only exist when paradox > 50%
-    - Hunt the player actively
-    - Phase through walls (reality doesn't bind them)
-    - Touching ejects player from universe briefly
-    - Disappear when paradox drops
-    - Multiple can spawn at high paradox
-    """
+    """Enemy manifested by high paradox. Hunts player and phases through walls."""
     
     def __init__(self, position: Tuple[float, float],
                  paradox_threshold: float = 50.0):
-        """
-        Initialize a Paradox Wraith.
-        
-        Args:
-            position: Starting position
-            paradox_threshold: Minimum paradox level to exist
-        """
+        """Initialize a Paradox Wraith."""
         config = EntityConfig(
             position=position,
             size=(TILE_SIZE, TILE_SIZE),

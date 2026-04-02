@@ -14,7 +14,7 @@ import time
 from typing import List, Tuple, Optional, Dict, Set
 from dataclasses import dataclass, field
 
-from ..core.settings import SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE
+from ..core.settings import SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, get_ui_font
 from ..core.events import EventSystem, GameEvent
 
 
@@ -77,10 +77,10 @@ class TipManager:
     def __init__(self):
         """Initialize the TipManager."""
         pygame.font.init()
-        self._font_title = pygame.font.Font(None, 28)
-        self._font_body = pygame.font.Font(None, 24)
-        self._font_icon = pygame.font.Font(None, 36)
-        self._font_dismiss = pygame.font.Font(None, 20)
+        self._font_title = get_ui_font(22)
+        self._font_body = get_ui_font(18)
+        self._font_icon = get_ui_font(30)
+        self._font_dismiss = get_ui_font(16)
         
         # Active tip being displayed
         self._active_tip: Optional[ActiveTip] = None
