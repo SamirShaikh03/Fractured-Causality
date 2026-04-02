@@ -53,8 +53,7 @@ But power comes with consequences. Every action you take in one universe creates
 ### 🔗 **Causal Graph System**
 - **Entity Dependencies**: Objects and enemies are causally linked across universes
 - **Dynamic Cause-Effect Chains**: Actions propagate through causal connections
-- **Causal Sight Mode**: Visualize the hidden connections between entities
-- **Multiple Operators**: AND, OR, NOT, XOR logic for complex puzzles
+- **Causal Sight Mode**: Visualize the hidden connections between **: AND, OR, NOT, XOR logic for complex puzzles
 
 ### ⚠️ **Paradox Management**
 - **Real-time Paradox Tracking**: Monitor reality stability
@@ -66,7 +65,8 @@ But power comes with consequences. Every action you take in one universe creates
 - **3 Hand-Crafted Levels**: Progressive difficulty with unique puzzle mechanics
 - **Multiple Entity Types**: Keys, variant doors, bridges, trees, portals
 - **Enemy AI**: Shades, Echo Walkers, and Paradox Wraiths with unique behaviors
-- **Interactive Objects**: Causal Stones, Echo Switches, and more
+- **Interactive Objects**: Causal Stones, Echo Switches, and moreentities
+- **Multiple Operators
 
 ### 🎨 **Polished Presentation**
 - **Cyberpunk Aesthetic**: Neon colors, glowing effects, animated UI

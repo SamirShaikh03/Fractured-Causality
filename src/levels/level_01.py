@@ -19,6 +19,7 @@ from ..entities.objects.echo_switch import EchoSwitch
 from ..entities.objects.variant_door import VariantDoor
 from ..entities.objects.exit_portal import ExitPortal
 from ..entities.objects.key import Key
+from ..entities.objects.coin import Coin
 from ..core.settings import TILE_SIZE
 from ..core.events import EventSystem, GameEvent
 
@@ -155,6 +156,20 @@ class Level01(Level):
             key_id="key_01"
         )
         self.add_entity(key, [UniverseType.PRIME, UniverseType.ECHO])
+        
+        # ---------- COINS ----------
+        # Scattered along the paths for scoring
+        coin1 = Coin(position=(6 * TILE_SIZE, 3 * TILE_SIZE))
+        self.add_entity(coin1, [UniverseType.PRIME, UniverseType.ECHO])
+        
+        coin2 = Coin(position=(12 * TILE_SIZE, 3 * TILE_SIZE))
+        self.add_entity(coin2, [UniverseType.PRIME, UniverseType.ECHO])
+        
+        coin3 = Coin(position=(6 * TILE_SIZE, 11 * TILE_SIZE))
+        self.add_entity(coin3, [UniverseType.PRIME, UniverseType.ECHO])
+        
+        coin4 = Coin(position=(12 * TILE_SIZE, 11 * TILE_SIZE))
+        self.add_entity(coin4, [UniverseType.PRIME, UniverseType.ECHO])
         
         # ---------- EXIT PORTAL ----------
         # Right side, middle area
