@@ -2,8 +2,6 @@
 
 ![Fractured Causality Banner](assets/images/banner.png)
 
-*Banner image generated using [ChatGPT](https://chatgpt.com/)*
-
 # FRACTURED CAUSALITY
 
 ### *Where Every Action Echoes Across Parallel Universes*
@@ -48,6 +46,6 @@ Some puzzles need universe switching. Some need you to break things in one reali
 
 ## The Tech
 
-Built in Python with Pygame. ~8,500 lines of code across 42 files. Features a custom causal graph system, multi-universe state management, and a paradox tracking engine. Clean architecture, solid design patterns, fully playable across 3 hand-crafted levels.
+Built in Python with Pygame. ~8,500 lines of code across 42 files. Features a custom causal graph system, multi-universe state management, and a paradox tracking engine. Clean architecture, solid design patterns, fully playable across 9 hand-crafted levels.
 
 **License**: MIT | **Made by**: Samir Shaikh | **2026**
