@@ -11,13 +11,13 @@ from dataclasses import dataclass
 import time
 
 from ..core.settings import (
-    SCREEN_WIDTH, SCREEN_HEIGHT,
     COLOR_PRIME,
     PARADOX_STABLE, PARADOX_UNSTABLE, PARADOX_CRITICAL,
-    PLAYER_MAX_HEALTH,
-    get_ui_font
+    PLAYER_MAX_HEALTH
 )
 from ..core.events import EventSystem, GameEvent
+from .design_system import UI_PALETTE, get_ui_fonts
+from .components import draw_stat_box, draw_center_label_box, draw_bottom_bar, hud_layout, get_ui_scale
 
 
 # Basic HUD colors
@@ -54,16 +54,19 @@ class HUD:
         """Initialize the HUD."""
         # Font initialization
         pygame.font.init()
-        self._font_large = get_ui_font(36)
-        self._font_medium = get_ui_font(28)
-        self._font_small = get_ui_font(22)
-        self._font_tiny = get_ui_font(16)
+        self._ui_scale: float = 1.0
+        self._fonts = get_ui_fonts(self._ui_scale)
+        self._font_large = self._fonts["title"]
+        self._font_medium = self._fonts["primary"]
+        self._font_small = self._fonts["secondary"]
+        self._font_tiny = self._fonts["hint"]
         
         # State
         self._paradox_level: float = 0.0
         self._keys_collected: int = 0
         self._keys_required: int = 0
         self._current_universe: str = "PRIME"
+        self._current_level_name: str = ""
         self._universe_color: Tuple[int, int, int] = COLOR_PRIME
         self._causal_sight_active: bool = False
         
@@ -88,6 +91,7 @@ class HUD:
         EventSystem.subscribe(GameEvent.UI_MESSAGE, self._on_message)
         EventSystem.subscribe(GameEvent.PLAYER_DAMAGED, self._on_player_damaged)
         EventSystem.subscribe(GameEvent.PLAYER_HEALED, self._on_player_healed)
+        EventSystem.subscribe(GameEvent.LEVEL_STARTED, self._on_level_started)
     
     def update(self, dt: float) -> None:
         """
@@ -130,65 +134,69 @@ class HUD:
         Args:
             surface: Target surface
         """
-        self._render_health_bar(surface)
-        self._render_paradox_meter(surface)
-        self._render_key_counter(surface)
-        self._render_universe_indicator(surface)
-        self._render_causal_sight_indicator(surface)
+        self._refresh_fonts_for_surface(surface)
+        layout = hud_layout(surface)
+
+        self._render_paradox_meter(surface, layout["paradox"])
+        self._render_key_counter(surface, layout["keys"])
+        self._render_universe_indicator(surface, layout["center"])
+        self._render_health_bar(surface, layout["health"])
+        self._render_causal_sight_indicator(surface, layout["center"])
         self._render_messages(surface)
         self._render_controls_reminder(surface)
+
+    def _refresh_fonts_for_surface(self, surface: pygame.Surface) -> None:
+        """Rebuild fonts when UI scale changes for resolution responsiveness."""
+        scale = get_ui_scale(surface)
+        if abs(scale - self._ui_scale) < 0.02:
+            return
+
+        self._ui_scale = scale
+        self._fonts = get_ui_fonts(scale)
+        self._font_large = self._fonts["title"]
+        self._font_medium = self._fonts["primary"]
+        self._font_small = self._fonts["secondary"]
+        self._font_tiny = self._fonts["hint"]
     
-    def _render_paradox_meter(self, surface: pygame.Surface) -> None:
+    def _render_paradox_meter(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
         """Render a basic paradox meter."""
-        x, y = 20, 20
-        width, height = 220, 28
-
-        bg_rect = pygame.Rect(x, y, width, height)
-        pygame.draw.rect(surface, HUD_BG_DARK, bg_rect)
-
-        fill_width = int((width - 4) * (self._paradox_level / 100))
+        fill_width = int((rect.width - 4) * (self._paradox_level / 100))
 
         if self._paradox_level < PARADOX_STABLE:
-            color = HUD_CYAN
+            color = UI_PALETTE.info
         elif self._paradox_level < PARADOX_UNSTABLE:
-            color = HUD_GOLD
+            color = UI_PALETTE.warning
         elif self._paradox_level < PARADOX_CRITICAL:
             color = (200, 125, 70)
         else:
-            color = (200, 75, 75)
+            color = UI_PALETTE.error
+
+        draw_stat_box(
+            surface,
+            rect,
+            "PARADOX",
+            f"{int(self._paradox_level)}%",
+            self._font_small,
+            self._font_medium,
+            accent_color=color,
+            text_color=UI_PALETTE.text_primary,
+        )
 
         if fill_width > 0:
-            fill_rect = pygame.Rect(x + 2, y + 2, fill_width, height - 4)
+            fill_rect = pygame.Rect(rect.x + 2, rect.bottom - 7, fill_width, 5)
             pygame.draw.rect(surface, color, fill_rect)
-
-        border_color = color if self._paradox_level > 0 else HUD_CYAN
-        pygame.draw.rect(surface, border_color, bg_rect, 2)
-
-        label = self._font_small.render("PARADOX", True, HUD_TEXT_DIM)
-        surface.blit(label, (x + 6, y + 6))
-
-        pct_text = f"{int(self._paradox_level)}%"
-        pct = self._font_medium.render(pct_text, True, HUD_TEXT_BRIGHT)
-        surface.blit(pct, (x + width - pct.get_width() - 8, y + 4))
     
-    def _render_health_bar(self, surface: pygame.Surface) -> None:
+    def _render_health_bar(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
         """Render the player health bar."""
-        x = SCREEN_WIDTH - 240
-        y = 20
-        width, height = 220, 28
-
-        bg_rect = pygame.Rect(x, y, width, height)
-        pygame.draw.rect(surface, HUD_BG_DARK, bg_rect)
-
         health_pct = self._player_health / self._player_max_health if self._player_max_health > 0 else 0
-        fill_width = int((width - 4) * health_pct)
+        fill_width = int((rect.width - 4) * health_pct)
 
         if health_pct > 0.6:
-            color = (75, 180, 100)
+            color = UI_PALETTE.success
         elif health_pct > 0.3:
-            color = HUD_GOLD
+            color = UI_PALETTE.warning
         else:
-            color = (190, 80, 80)
+            color = UI_PALETTE.error
 
         if self._health_flash > 0:
             flash_intensity = self._health_flash
@@ -198,85 +206,81 @@ class HUD:
                 int(color[2] * (1 - flash_intensity * 0.5))
             )
 
-        if fill_width > 0:
-            fill_rect = pygame.Rect(x + 2, y + 2, fill_width, height - 4)
-            pygame.draw.rect(surface, color, fill_rect)
-
-        border_color = color if health_pct > 0 else (100, 100, 100)
-        pygame.draw.rect(surface, border_color, bg_rect, 2)
-
-        label = self._font_small.render("HEALTH", True, HUD_TEXT_DIM)
-        surface.blit(label, (x + 6, y + 6))
-
-        hp_text = f"{self._player_health}/{self._player_max_health}"
-        hp = self._font_medium.render(hp_text, True, HUD_TEXT_BRIGHT)
-        surface.blit(hp, (x + width - hp.get_width() - 8, y + 4))
-    
-    def _render_key_counter(self, surface: pygame.Surface) -> None:
-        """Render a basic key counter."""
-        x, y = 20, 58
-
-        panel_rect = pygame.Rect(x - 4, y - 2, 170, 28)
-        pygame.draw.rect(surface, HUD_BG_DARK, panel_rect)
-        pygame.draw.rect(surface, HUD_GOLD, panel_rect, 1)
-
-        text = self._font_medium.render(
-            f"KEYS {self._keys_collected}/{self._keys_required}",
-            True,
-            HUD_TEXT_BRIGHT,
+        draw_stat_box(
+            surface,
+            rect,
+            "HEALTH",
+            f"{self._player_health}/{self._player_max_health}",
+            self._font_small,
+            self._font_medium,
+            accent_color=color,
+            text_color=UI_PALETTE.text_primary,
         )
-        surface.blit(text, (x + 6, y))
+
+        if fill_width > 0:
+            fill_rect = pygame.Rect(rect.x + 2, rect.bottom - 7, fill_width, 5)
+            pygame.draw.rect(surface, color, fill_rect)
     
-    def _render_universe_indicator(self, surface: pygame.Surface) -> None:
+    def _render_key_counter(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
+        """Render a basic key counter."""
+        draw_stat_box(
+            surface,
+            rect,
+            "KEYS",
+            f"{self._keys_collected}/{self._keys_required}",
+            self._font_small,
+            self._font_medium,
+            accent_color=UI_PALETTE.warning,
+            text_color=UI_PALETTE.text_primary,
+        )
+    
+    def _render_universe_indicator(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
         """Render a basic universe indicator."""
-        width, height = 170, 30
-        x = (SCREEN_WIDTH - width) // 2
-        y = 18
-
-        bg_color = tuple(int(c * 0.2) for c in self._universe_color)
-        bg_rect = pygame.Rect(x, y, width, height)
-        pygame.draw.rect(surface, bg_color, bg_rect)
-        pygame.draw.rect(surface, self._universe_color, bg_rect, 2)
-
-        label = self._font_medium.render(f"UNIVERSE: {self._current_universe}", True, self._universe_color)
-        label_x = x + (width - label.get_width()) // 2
-        label_y = y + (height - label.get_height()) // 2
-        surface.blit(label, (label_x, label_y))
+        header = self._current_level_name or "UNKNOWN LEVEL"
+        text = f"{header} | {self._current_universe}"
+        draw_center_label_box(
+            surface,
+            rect,
+            text,
+            self._font_small,
+            border_color=self._universe_color,
+            text_color=self._universe_color,
+        )
     
-    def _render_causal_sight_indicator(self, surface: pygame.Surface) -> None:
+    def _render_causal_sight_indicator(self, surface: pygame.Surface, center_rect: pygame.Rect) -> None:
         """Render causal sight status text."""
         if not self._causal_sight_active:
             return
 
-        label = self._font_small.render("CAUSAL SIGHT ON", True, (180, 190, 220))
+        label = self._font_small.render("CAUSAL SIGHT ON", True, UI_PALETTE.info)
         width = label.get_width() + 16
         height = 24
-        x = (SCREEN_WIDTH - width) // 2
-        y = 56
+        x = center_rect.centerx - width // 2
+        y = center_rect.bottom + 6
 
         rect = pygame.Rect(x, y, width, height)
-        pygame.draw.rect(surface, HUD_BG_DARK, rect)
-        pygame.draw.rect(surface, (120, 130, 165), rect, 1)
+        pygame.draw.rect(surface, UI_PALETTE.panel_soft, rect)
+        pygame.draw.rect(surface, UI_PALETTE.info, rect, 1)
         surface.blit(label, (x + 8, y + (height - label.get_height()) // 2))
     
     def _render_messages(self, surface: pygame.Surface) -> None:
         """Render status messages as plain text with simple boxes."""
-        x = SCREEN_WIDTH // 2
-        y = SCREEN_HEIGHT - 100
+        x = surface.get_width() // 2
+        y = surface.get_height() - 100
         
         type_colors = {
-            "info": (200, 200, 200),
-            "warning": (255, 200, 80),
-            "success": (80, 255, 120),
-            "causal": (160, 170, 255),
-            "error": (255, 90, 90),
+            "info": UI_PALETTE.text_primary,
+            "warning": UI_PALETTE.warning,
+            "success": UI_PALETTE.success,
+            "causal": UI_PALETTE.info,
+            "error": UI_PALETTE.error,
         }
         type_accents = {
-            "info": (120, 140, 160),
-            "warning": (180, 140, 40),
-            "success": (50, 180, 80),
-            "causal": (110, 110, 200),
-            "error": (180, 50, 50),
+            "info": UI_PALETTE.border,
+            "warning": UI_PALETTE.warning,
+            "success": UI_PALETTE.success,
+            "causal": UI_PALETTE.info,
+            "error": UI_PALETTE.error,
         }
         
         for i, message in enumerate(self._messages):
@@ -290,10 +294,11 @@ class HUD:
             
             bg_w = text.get_width() + 16
             bg_h = text.get_height() + 6
-            bg_surface = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
-            pygame.draw.rect(bg_surface, (16, 18, 24, int(message.alpha * 0.65)), (0, 0, bg_w, bg_h))
+            bg_surface = pygame.Surface((bg_w, bg_h))
+            bg_surface.set_alpha(int(message.alpha * 0.7))
+            bg_surface.fill(UI_PALETTE.panel_soft)
             border = type_accents.get(message.type, (120, 120, 120))
-            pygame.draw.rect(bg_surface, (*border, int(message.alpha * 0.45)), (0, 0, bg_w, bg_h), 1)
+            pygame.draw.rect(bg_surface, border, (0, 0, bg_w, bg_h), 1)
             surface.blit(bg_surface, (text_x - 8, text_y - 3))
             
             surface.blit(text, (text_x, text_y))
@@ -343,6 +348,9 @@ class HUD:
         self._current_universe = data.get("universe", "PRIME")
         self._universe_color = data.get("color", COLOR_PRIME)
         self._universe_flash = 1.0
+
+    def _on_level_started(self, data: dict) -> None:
+        self._current_level_name = data.get("level_name", "")
     
     def _on_causal_sight(self, data: dict) -> None:
         self._causal_sight_active = data.get("active", False)
@@ -370,11 +378,9 @@ class HUD:
         EventSystem.unsubscribe(GameEvent.UI_MESSAGE, self._on_message)
         EventSystem.unsubscribe(GameEvent.PLAYER_DAMAGED, self._on_player_damaged)
         EventSystem.unsubscribe(GameEvent.PLAYER_HEALED, self._on_player_healed)
+        EventSystem.unsubscribe(GameEvent.LEVEL_STARTED, self._on_level_started)
     
     def _render_controls_reminder(self, surface: pygame.Surface) -> None:
         """Render a plain controls reminder."""
         hint = "WASD Move | Space Switch | E Interact | F Attack | Tab Sight | Esc Pause"
-        text = self._font_tiny.render(hint, True, HUD_TEXT_DIM)
-        x = (SCREEN_WIDTH - text.get_width()) // 2
-        y = SCREEN_HEIGHT - 26
-        surface.blit(text, (x, y))
+        draw_bottom_bar(surface, hint, self._font_tiny)

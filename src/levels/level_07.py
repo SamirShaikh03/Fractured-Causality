@@ -184,25 +184,55 @@ class Level07(Level):
         )
         self.add_entity(key2, [UniverseType.PRIME, UniverseType.ECHO, UniverseType.FRACTURE])
 
-        # Paradox Wraith guarding chamber 4
-        wraith = ParadoxWraith(
+        # Paradox Wraiths - multiple pressure points in late chambers
+        wraith_a = ParadoxWraith(
             position=(19 * TILE_SIZE, 8 * TILE_SIZE),
-            paradox_threshold=40.0
+            paradox_threshold=35.0
         )
-        self.add_entity(wraith, [UniverseType.FRACTURE])
+        self.add_entity(wraith_a, [UniverseType.FRACTURE])
 
-        # Shade in chamber 2
-        shade = Shade(
+        wraith_b = ParadoxWraith(
+            position=(24 * TILE_SIZE, 8 * TILE_SIZE),
+            paradox_threshold=45.0
+        )
+        self.add_entity(wraith_b, [UniverseType.FRACTURE])
+
+        # Shades with broader patrol routes to contest corridor traversal
+        shade_a = Shade(
             position=(7 * TILE_SIZE, 8 * TILE_SIZE),
-            shade_id="shade_07",
+            shade_id="shade_07_a",
             patrol_points=[
                 (6 * TILE_SIZE, 7 * TILE_SIZE),
                 (9 * TILE_SIZE, 7 * TILE_SIZE),
                 (9 * TILE_SIZE, 9 * TILE_SIZE),
-                (6 * TILE_SIZE, 9 * TILE_SIZE)
+                (6 * TILE_SIZE, 9 * TILE_SIZE),
             ]
         )
-        self.add_entity(shade, [UniverseType.PRIME])
+        self.add_entity(shade_a, [UniverseType.PRIME])
+
+        shade_b = Shade(
+            position=(13 * TILE_SIZE, 8 * TILE_SIZE),
+            shade_id="shade_07_b",
+            patrol_points=[
+                (11 * TILE_SIZE, 7 * TILE_SIZE),
+                (15 * TILE_SIZE, 7 * TILE_SIZE),
+                (15 * TILE_SIZE, 9 * TILE_SIZE),
+                (11 * TILE_SIZE, 9 * TILE_SIZE),
+            ]
+        )
+        self.add_entity(shade_b, [UniverseType.ECHO])
+
+        shade_c = Shade(
+            position=(20 * TILE_SIZE, 8 * TILE_SIZE),
+            shade_id="shade_07_c",
+            patrol_points=[
+                (18 * TILE_SIZE, 7 * TILE_SIZE),
+                (25 * TILE_SIZE, 7 * TILE_SIZE),
+                (25 * TILE_SIZE, 9 * TILE_SIZE),
+                (18 * TILE_SIZE, 9 * TILE_SIZE),
+            ]
+        )
+        self.add_entity(shade_c, [UniverseType.PRIME, UniverseType.FRACTURE])
 
         # Exit
         exit_portal = ExitPortal(

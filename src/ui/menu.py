@@ -11,20 +11,21 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 from ..core.settings import SCREEN_WIDTH, SCREEN_HEIGHT, get_ui_font
+from .design_system import UI_PALETTE
 
 
 # =============================================================================
 # BASIC THEME COLORS
 # =============================================================================
-THEME_BG_DARK = (18, 20, 24)
-THEME_BG_MEDIUM = (32, 36, 42)
-THEME_BG_PANEL = (26, 30, 36)
-THEME_ACCENT_PRIMARY = (90, 140, 210)
-THEME_ACCENT_SECONDARY = (180, 150, 95)
-THEME_ACCENT_SUCCESS = (95, 165, 110)
-THEME_ACCENT_DANGER = (190, 95, 95)
-THEME_TEXT_BRIGHT = (255, 255, 255)
-THEME_TEXT_DIM = (170, 175, 185)
+THEME_BG_DARK = UI_PALETTE.bg
+THEME_BG_MEDIUM = UI_PALETTE.panel
+THEME_BG_PANEL = UI_PALETTE.panel_soft
+THEME_ACCENT_PRIMARY = UI_PALETTE.info
+THEME_ACCENT_SECONDARY = UI_PALETTE.warning
+THEME_ACCENT_SUCCESS = UI_PALETTE.success
+THEME_ACCENT_DANGER = UI_PALETTE.error
+THEME_TEXT_BRIGHT = UI_PALETTE.text_primary
+THEME_TEXT_DIM = UI_PALETTE.text_secondary
 THEME_TEXT_DISABLED = (95, 100, 110)
 
 
@@ -76,6 +77,13 @@ class Menu:
         self._font_small = get_ui_font(24)
         self._font_tiny = get_ui_font(20)
         self._font_micro = get_ui_font(14)
+
+        #How to Play typography hierarchy
+        self._font_howto_title = get_ui_font(52)
+        self._font_howto_section = get_ui_font(26)
+        self._font_howto_label = get_ui_font(18)
+        self._font_howto_body = get_ui_font(15)
+
         
         # State
         self._state: MenuState = MenuState.MAIN
@@ -398,7 +406,7 @@ class Menu:
         hint = "Arrow keys or mouse to move, Enter/click to select, Esc to go back"
         text = self._font_micro.render(hint, True, THEME_TEXT_DIM)
         x = (SCREEN_WIDTH - text.get_width()) // 2
-        y = SCREEN_HEIGHT - 50
+        y = SCREEN_HEIGHT - 46
         surface.blit(text, (x, y))
     
     # =========================================================================
@@ -406,31 +414,44 @@ class Menu:
     # =========================================================================
     
     def _draw_how_to_play(self, surface: pygame.Surface) -> None:
-        """Draw the how to play/tutorial screen with proper layout."""
-        # Title at top
-        title = self._font_large.render("HOW TO PLAY", True, THEME_TEXT_BRIGHT)
+        outer_margin = 32
+        gap_title_to_panels = 32
+        gap_panels_to_universe = 32
+        gap_universe_to_tip = 16
+        gap_tip_to_button = 32
+        gap_button_to_footer = 16
+        gutter = 12
+        grid_width = SCREEN_WIDTH - (outer_margin * 2)
+        col_w = (grid_width - gutter * 11) // 12
+        left_x = outer_margin
+        left_w = col_w * 6 + gutter * 5
+        right_x = left_x + left_w + gutter
+        right_w = left_w
+
+        full_x = outer_margin
+        full_w = grid_width
+
+        title = self._font_howto_title.render("HOW TO PLAY", True, THEME_TEXT_BRIGHT)
         title_x = (SCREEN_WIDTH - title.get_width()) // 2
-        surface.blit(title, (title_x, 45))
-        
-        # Decorative line under title
-        line_y = 110
-        pygame.draw.line(surface, THEME_ACCENT_SECONDARY, 
-                        (SCREEN_WIDTH // 2 - 120, line_y), 
-                        (SCREEN_WIDTH // 2 + 120, line_y), 2)
-        
-        # Layout: Two columns on top, one wide panel below
-        panel_margin = 40
-        panel_gap = 25
-        top_panel_width = (SCREEN_WIDTH - panel_margin * 2 - panel_gap) // 2
-        top_panel_height = 210
-        top_panel_y = 135
-        
-        # Left panel - Controls
-        left_x = panel_margin
+        title_y = 32
+        surface.blit(title, (title_x, title_y))
+
+        line_y = title_y + title.get_height() + 10
+        pygame.draw.line(
+            surface,
+            THEME_ACCENT_SECONDARY,
+            (SCREEN_WIDTH // 2 - 150, line_y),
+            (SCREEN_WIDTH // 2 + 150, line_y),
+            2
+        )
+
+        top_y = line_y + gap_title_to_panels
+        top_h = 220
+
         self._draw_tutorial_panel(
-            surface, left_x, top_panel_y, top_panel_width, top_panel_height,
+            surface, left_x, top_y, left_w, top_h,
             "CONTROLS", THEME_ACCENT_PRIMARY, [
-                ("W A S D", "Move your character"),
+                ("WASD", "Move your character"),
                 ("SPACE", "Switch between universes"),
                 ("E", "Interact with objects"),
                 ("F", "Attack enemies"),
@@ -438,110 +459,130 @@ class Menu:
                 ("ESC", "Pause the game"),
             ]
         )
-        
-        # Right panel - Objective
-        right_x = panel_margin + top_panel_width + panel_gap
+
         self._draw_tutorial_panel(
-            surface, right_x, top_panel_y, top_panel_width, top_panel_height,
+            surface, right_x, top_y, right_w, top_h,
             "OBJECTIVE", THEME_ACCENT_SECONDARY, [
                 ("Goal", "Reach the EXIT PORTAL"),
                 ("Keys", "Collect to unlock doors"),
-                ("Enemies", "Defeat or avoid them"),
-                ("Health", "Don't let it reach zero!"),
+                ("Enemy", "Defeat or avoid them"),
+                ("Health", "Don't let it reach zero"),
                 ("Paradox", "Keep it low to survive"),
             ]
         )
-        
-        # Bottom panel - Universe System (full width)
-        bottom_y = top_panel_y + top_panel_height + panel_gap
-        bottom_width = SCREEN_WIDTH - panel_margin * 2
+
+        bottom_y = top_y + top_h + gap_panels_to_universe
+        bottom_h = 150
         self._draw_tutorial_panel(
-            surface, panel_margin, bottom_y, bottom_width, 140,
+            surface, full_x, bottom_y, full_w, bottom_h,
             "UNIVERSE SYSTEM", THEME_ACCENT_SUCCESS, [
                 ("PRIME (Blue)", "The original, stable timeline - your starting point"),
                 ("ECHO (Green)", "A parallel dimension where things are different"),
                 ("FRACTURE (Red)", "An unstable reality with unique challenges"),
-            ], wide=True
+            ]
         )
-        
-        # Tip box at bottom
-        tip_y = bottom_y + 155
+
+        tip_y = bottom_y + bottom_h + gap_universe_to_tip
         tip_text = "TIP: If a path is blocked, try switching to another universe!"
-        tip = self._font_tiny.render(tip_text, True, THEME_ACCENT_SUCCESS)
+        tip = self._font_howto_body.render(tip_text, True, THEME_ACCENT_SUCCESS)
         tip_x = (SCREEN_WIDTH - tip.get_width()) // 2
-        
-        # Tip background
-        tip_bg = pygame.Rect(tip_x - 15, tip_y - 5, tip.get_width() + 30, tip.get_height() + 10)
-        pygame.draw.rect(surface, (25, 40, 30), tip_bg, border_radius=5)
-        pygame.draw.rect(surface, THEME_ACCENT_SUCCESS, tip_bg, 1, border_radius=5)
+
+        tip_bg = pygame.Rect(tip_x - 16, tip_y - 6, tip.get_width() + 32, tip.get_height() + 12)
+        pygame.draw.rect(surface, (25, 40, 30), tip_bg, border_radius=6)
+        pygame.draw.rect(surface, THEME_ACCENT_SUCCESS, tip_bg, 1, border_radius=6)
         surface.blit(tip, (tip_x, tip_y))
-        
-        # Back button at very bottom
-        btn_y = SCREEN_HEIGHT - 90
-        btn_width = 280
-        btn_height = 50
-        btn_x = (SCREEN_WIDTH - btn_width) // 2
-        
-        self._items[0].rect = pygame.Rect(btn_x, btn_y, btn_width, btn_height)
-        
+
+        btn_w = 370
+        btn_h = 60
+        btn_x = (SCREEN_WIDTH - btn_w) // 2
+        btn_y = tip_bg.bottom + gap_tip_to_button
+
+        self._items[0].rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
         item = self._items[0]
         is_selected = item.selected or item.hover
-        
+
         bg_color = (40, 50, 70) if is_selected else (30, 35, 50)
         border_color = THEME_ACCENT_PRIMARY if is_selected else (60, 65, 85)
         text_color = THEME_TEXT_BRIGHT if is_selected else THEME_TEXT_DIM
-        
+
         pygame.draw.rect(surface, bg_color, item.rect, border_radius=10)
         pygame.draw.rect(surface, border_color, item.rect, 2, border_radius=10)
-        
+
         text = self._font_medium.render(item.label, True, text_color)
-        text_x = btn_x + (btn_width - text.get_width()) // 2
-        text_y = btn_y + (btn_height - text.get_height()) // 2
+        text_x = btn_x + (btn_w - text.get_width()) // 2
+        text_y = btn_y + (btn_h - text.get_height()) // 2
         surface.blit(text, (text_x, text_y))
     
     def _draw_tutorial_panel(self, surface: pygame.Surface, x: int, y: int,
                              width: int, height: int, title: str, 
-                             accent_color: tuple, items: list, wide: bool = False) -> None:
-        """Draw a tutorial information panel with proper spacing."""
-        # Panel background
+                             accent_color: tuple, items: list) -> None:
         panel_rect = pygame.Rect(x, y, width, height)
         pygame.draw.rect(surface, THEME_BG_PANEL, panel_rect, border_radius=12)
-        
-        # Accent border
         pygame.draw.rect(surface, accent_color, panel_rect, 2, border_radius=12)
-        
-        # Title bar
-        title_bar_height = 38
+
+        pad_x = 20
+        pad_y = 14
+        title_bar_height = 42
+    
         title_bar = pygame.Surface((width, title_bar_height), pygame.SRCALPHA)
-        pygame.draw.rect(title_bar, (*accent_color[:3], 40), (0, 0, width, title_bar_height),
-                        border_top_left_radius=12, border_top_right_radius=12)
+        pygame.draw.rect(
+            title_bar, (*accent_color[:3], 40), (0, 0, width, title_bar_height),
+            border_top_left_radius=12, border_top_right_radius=12
+        )
         surface.blit(title_bar, (x, y))
-        
-        # Title text
-        title_surf = self._font_small.render(title, True, accent_color)
+    
+        title_surf = self._font_howto_section.render(title, True, accent_color)
         title_x = x + (width - title_surf.get_width()) // 2
         surface.blit(title_surf, (title_x, y + 8))
-        
-        # Content items
-        content_y = y + title_bar_height + 12
-        item_height = 24
-        
-        for key, value in items:
-            # Key (left side)
-            key_surf = self._font_tiny.render(key, True, THEME_ACCENT_PRIMARY)
-            surface.blit(key_surf, (x + 18, content_y))
-            
-            # Value (right side, or offset for wide panel)
-            if wide:
-                value_x = x + 200
-            else:
-                value_x = x + 140
-            
-            value_surf = self._font_tiny.render(value, True, THEME_TEXT_DIM)
-            surface.blit(value_surf, (value_x, content_y))
-            
-            content_y += item_height
     
+        content_x = x + pad_x
+        content_y = y + title_bar_height + pad_y
+        content_w = width - (pad_x * 2)
+    
+        label_strings = [f"{k}:" for k, _ in items]
+        max_label_w = 0
+        for label in label_strings:
+            max_label_w = max(max_label_w, self._font_howto_label.size(label)[0])
+    
+        label_col_w = min(max_label_w + 14, int(content_w * 0.36))
+        value_x = content_x + label_col_w
+        value_w = content_w - label_col_w
+    
+        row_gap = 8
+        for key, value in items:
+            key_text = f"{key}:"
+            key_surf = self._font_howto_label.render(key_text, True, THEME_ACCENT_PRIMARY)
+            surface.blit(key_surf, (content_x, content_y))
+    
+            wrapped_lines = self._wrap_panel_text(value, self._font_howto_body, value_w)
+            line_y = content_y
+            for line in wrapped_lines:
+                value_surf = self._font_howto_body.render(line, True, THEME_TEXT_DIM)
+                surface.blit(value_surf, (value_x, line_y))
+                line_y += value_surf.get_height() + 2
+    
+            row_h = max(key_surf.get_height(), line_y - content_y)
+            content_y += row_h + row_gap
+    
+    def _wrap_panel_text(self, text: str, font: pygame.font.Font, max_width: int) -> List[str]:
+        words = text.split()
+        if not words:
+            return [""]
+
+        lines: List[str] = []
+        current = words[0]
+
+        for word in words[1:]:
+            test = f"{current} {word}"
+            if font.size(test)[0] <= max_width:
+                current = test
+            else:
+                lines.append(current)
+                current = word
+
+        lines.append(current)
+        return lines
+
     def _get_title(self) -> str:
         """Get title based on state."""
         if self._state == MenuState.MAIN:

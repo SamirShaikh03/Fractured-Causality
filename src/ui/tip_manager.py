@@ -16,17 +16,18 @@ from dataclasses import dataclass, field
 
 from ..core.settings import SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, get_ui_font
 from ..core.events import EventSystem, GameEvent
+from .design_system import UI_PALETTE
 
 
 # Tip styling colors
-TIP_BG = (10, 10, 30)
-TIP_BORDER_INFO = (80, 180, 255)
+TIP_BG = UI_PALETTE.panel_soft
+TIP_BORDER_INFO = UI_PALETTE.info
 TIP_BORDER_HINT = (255, 215, 0)
-TIP_BORDER_WARN = (255, 120, 60)
+TIP_BORDER_WARN = UI_PALETTE.warning
 TIP_BORDER_STORY = (180, 120, 255)
-TIP_TEXT_MAIN = (255, 255, 255)
+TIP_TEXT_MAIN = UI_PALETTE.text_primary
 TIP_TEXT_KEY = (80, 220, 255)
-TIP_TEXT_DIM = (160, 160, 180)
+TIP_TEXT_DIM = UI_PALETTE.text_secondary
 
 
 @dataclass
@@ -77,10 +78,10 @@ class TipManager:
     def __init__(self):
         """Initialize the TipManager."""
         pygame.font.init()
-        self._font_title = get_ui_font(22)
-        self._font_body = get_ui_font(18)
-        self._font_icon = get_ui_font(30)
-        self._font_dismiss = get_ui_font(16)
+        self._font_title = get_ui_font(18)
+        self._font_body = get_ui_font(15)
+        self._font_icon = get_ui_font(24)
+        self._font_dismiss = get_ui_font(13)
         
         # Active tip being displayed
         self._active_tip: Optional[ActiveTip] = None
@@ -373,7 +374,7 @@ class TipManager:
                          total_height - dismiss_surf.get_height() - 6))
         
         surface.blit(tip_surface, (box_x, box_y))
-    
+
     def _wrap_text(self, text: str, font: pygame.font.Font, max_width: int) -> List[str]:
         """
         Word-wrap text to fit within max_width.
