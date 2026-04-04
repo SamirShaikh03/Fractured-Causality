@@ -216,11 +216,19 @@ class VariantDoor(Entity):
     def on_interact(self, player) -> bool:
         """Handle player interaction."""
         if self.is_locked:
-            # Check if player has the key
-            if self.requires_key and hasattr(player, 'inventory'):
-                if self.key_id in player.inventory:
+            # Basic key flow: use the collected key counter.
+            if self.requires_key:
+                player_keys = getattr(player, 'keys_collected', 0)
+                if player_keys > 0:
+                    player.keys_collected = player_keys - 1
                     self.unlock("key")
                     return self.open("player")
+
+                EventSystem.emit(GameEvent.UI_MESSAGE, {
+                    "message": "Need a key to open this door.",
+                    "type": "warning"
+                })
+                return False
             
             # Visual/audio feedback for locked
             EventSystem.emit(GameEvent.UI_MESSAGE, {

@@ -84,6 +84,7 @@ class Player(Entity):
         # Interaction
         self.nearby_interactive: Optional[Entity] = None
         self.keys_collected: int = 0
+        self.rewards: int = 0
         
         # Animation
         self.animation_state: str = "idle"
@@ -605,7 +606,8 @@ class Player(Entity):
         data = super().serialize()
         data.update({
             "current_universe": self.current_universe.value,
-            "causal_sight_active": self.causal_sight_active
+            "causal_sight_active": self.causal_sight_active,
+            "rewards": self.rewards,
         })
         return data
     
@@ -615,4 +617,5 @@ class Player(Entity):
         player = cls(tuple(data["position"]))
         player.current_universe = UniverseType(data["current_universe"])
         player.causal_sight_active = data.get("causal_sight_active", False)
+        player.rewards = data.get("rewards", 0)
         return player

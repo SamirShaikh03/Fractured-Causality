@@ -369,6 +369,9 @@ class Menu:
         if self._state == MenuState.MAIN:
             btn_width = 440
             btn_height = 62
+        elif self._state == MenuState.LEVEL_COMPLETE:
+            btn_width = 420
+            btn_height = 51
         else:
             btn_width = 300
             btn_height = 50

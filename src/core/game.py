@@ -30,8 +30,6 @@ from ..levels.level_04 import Level04
 from ..levels.level_05 import Level05
 from ..levels.level_06 import Level06
 from ..levels.level_07 import Level07
-from ..levels.level_08 import Level08
-from ..levels.level_09 import Level09
 
 from ..systems.input_handler import InputHandler, InputAction
 from ..systems.physics import PhysicsSystem
@@ -133,6 +131,10 @@ class Game:
         """Initialize game objects."""
         # Player
         self.player = Player(position=(100, 100))
+
+        # Simple reward system
+        self._reward_per_level: int = 10
+        self._rewarded_levels: set[str] = set()
         
         # Level loader
         self.level_loader = LevelLoader(self.multiverse)
@@ -175,8 +177,6 @@ class Game:
         self.level_loader.register_level("level_05", Level05)
         self.level_loader.register_level("level_06", Level06)
         self.level_loader.register_level("level_07", Level07)
-        self.level_loader.register_level("level_08", Level08)
-        self.level_loader.register_level("level_09", Level09)
     
     def _setup_event_handlers(self) -> None:
         """Set up event handlers."""
@@ -639,6 +639,8 @@ class Game:
         """Start a new game."""
         # Reset player health
         self.player.reset_health()
+        self.player.rewards = 0
+        self._rewarded_levels.clear()
         
         # Load first level
         self.current_level = self.level_loader.load_level("level_01", self.player)
@@ -805,6 +807,17 @@ class Game:
     
     def _on_level_complete(self, data: dict) -> None:
         """Handle level completion."""
+        level_id = self.current_level.config.level_id if self.current_level else ""
+        if level_id and level_id not in self._rewarded_levels:
+            self._rewarded_levels.add(level_id)
+            self.player.rewards += self._reward_per_level
+
+            EventSystem.emit(GameEvent.UI_MESSAGE, {
+                "message": f"Reward +{self._reward_per_level} | Total: {self.player.rewards}",
+                "type": "success",
+                "duration": 2.5
+            })
+
         self._level_complete()
         
         # Celebratory particles

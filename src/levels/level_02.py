@@ -20,6 +20,7 @@ from ..entities.objects.echo_switch import EchoSwitch
 from ..entities.objects.variant_door import VariantDoor
 from ..entities.objects.exit_portal import ExitPortal
 from ..entities.objects.key import Key
+from ..entities.enemies.echo_walker import EchoWalker
 from ..core.settings import TILE_SIZE
 from ..core.events import EventSystem, GameEvent
 
@@ -214,6 +215,16 @@ class Level02(Level):
             echo_open=False
         )
         self.add_entity(gate_main, [UniverseType.PRIME, UniverseType.ECHO])
+
+        # ---------- EARLY ENEMY INTRO ----------
+        # Echo Walker appears in Level 02 to establish enemy pressure earlier,
+        # while keeping movement space and puzzle flow intact.
+        walker_intro = EchoWalker(
+            position=(12 * TILE_SIZE, 8 * TILE_SIZE),
+            echo_delay=1.6,
+            home_universe=UniverseType.ECHO,
+        )
+        self.add_entity(walker_intro, [UniverseType.ECHO])
         
         # ---------- EXIT PORTAL ----------
         exit_portal = ExitPortal(

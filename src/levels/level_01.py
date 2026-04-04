@@ -20,6 +20,7 @@ from ..entities.objects.variant_door import VariantDoor
 from ..entities.objects.exit_portal import ExitPortal
 from ..entities.objects.key import Key
 from ..entities.objects.coin import Coin
+from ..entities.enemies.shade import Shade
 from ..core.settings import TILE_SIZE
 from ..core.events import EventSystem, GameEvent
 
@@ -170,6 +171,21 @@ class Level01(Level):
         
         coin4 = Coin(position=(12 * TILE_SIZE, 11 * TILE_SIZE))
         self.add_entity(coin4, [UniverseType.PRIME, UniverseType.ECHO])
+
+        # ---------- EARLY ENEMY INTRO ----------
+        # A single, short-patrol Shade in Prime introduces combat pressure
+        # without overwhelming first-level onboarding.
+        shade_intro = Shade(
+            position=(15 * TILE_SIZE, 3 * TILE_SIZE),
+            shade_id="shade_intro_01",
+            patrol_points=[
+                (14 * TILE_SIZE, 3 * TILE_SIZE),
+                (16 * TILE_SIZE, 3 * TILE_SIZE),
+                (16 * TILE_SIZE, 4 * TILE_SIZE),
+                (14 * TILE_SIZE, 4 * TILE_SIZE),
+            ]
+        )
+        self.add_entity(shade_intro, [UniverseType.PRIME])
         
         # ---------- EXIT PORTAL ----------
         # Right side, middle area
@@ -195,6 +211,8 @@ class Level01(Level):
         door = VariantDoor(
             position=(14 * TILE_SIZE, 7 * TILE_SIZE),
             door_id="door_01",
+            requires_key=True,
+            key_id="key_01",
             prime_open=False,  # Closed in Prime
             echo_open=True     # Open in Echo
         )

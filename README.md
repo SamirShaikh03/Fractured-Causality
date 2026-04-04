@@ -46,6 +46,6 @@ Some puzzles need universe switching. Some need you to break things in one reali
 
 ## The Tech
 
-Built in Python with Pygame. ~8,500 lines of code across 42 files. Features a custom causal graph system, multi-universe state management, and a paradox tracking engine. Clean architecture, solid design patterns, fully playable across 9 hand-crafted levels.
+Built in Python with Pygame. ~8,500 lines of code across 42 files. Features a custom causal graph system, multi-universe state management, and a paradox tracking engine. Clean architecture, solid design patterns, fully playable across 7 hand-crafted campaign levels.
 
 **License**: MIT | **Made by**: Samir Shaikh | **2026**
