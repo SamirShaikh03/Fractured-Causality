@@ -25,6 +25,7 @@ from ..core.settings import (
 )
 from ..core.events import EventSystem, GameEvent
 from ..multiverse.universe import UniverseType
+from ..utils.sprite_loader import load_entity_sprite
 
 if TYPE_CHECKING:
     from ..multiverse.multiverse_manager import MultiverseManager
@@ -49,9 +50,14 @@ class Player(Entity):
         Args:
             position: Starting position
         """
+        scaled_player_size = (
+            max(1, int(round(PLAYER_SIZE[0] * 1.3225))),
+            max(1, int(round(PLAYER_SIZE[1] * 1.3225))),
+        )
+
         config = EntityConfig(
             position=position,
-            size=PLAYER_SIZE,
+            size=scaled_player_size,
             color=COLOR_PLAYER,
             persistence=EntityPersistence.ANCHORED,  # Player is in all universes
             solid=True,
@@ -117,6 +123,11 @@ class Player(Entity):
     
     def _create_player_sprite(self) -> None:
         """Create the player sprite with visual detail."""
+        loaded = load_entity_sprite("player.png", self.size)
+        if loaded is not None:
+            self.sprite = loaded
+            return
+
         self.sprite = pygame.Surface(self.size, pygame.SRCALPHA)
         
         w, h = self.size

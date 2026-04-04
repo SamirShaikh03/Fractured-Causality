@@ -15,6 +15,7 @@ from ..entity import Entity, EntityConfig, EntityPersistence
 from ...core.settings import TILE_SIZE, PARADOX_CRITICAL_THRESHOLD
 from ...multiverse.causal_node import EntityState
 from ...core.events import EventSystem, GameEvent
+from ...utils.sprite_loader import load_entity_sprite
 
 
 class ParadoxWraith(Entity):
@@ -23,9 +24,10 @@ class ParadoxWraith(Entity):
     def __init__(self, position: Tuple[float, float],
                  paradox_threshold: float = 50.0):
         """Initialize a Paradox Wraith."""
+        scaled_size = max(1, int(round(TILE_SIZE * 1.3225)))
         config = EntityConfig(
             position=position,
-            size=(TILE_SIZE, TILE_SIZE),
+            size=(scaled_size, scaled_size),
             color=(255, 50, 50),
             persistence=EntityPersistence.EXCLUSIVE,
             solid=False,  # Passes through walls
@@ -62,6 +64,11 @@ class ParadoxWraith(Entity):
     
     def _create_sprite(self) -> None:
         """Create the Wraith's terrifying appearance."""
+        loaded = load_entity_sprite("enemy_paradox_wraith.png", self.size)
+        if loaded is not None:
+            self.sprite = loaded
+            return
+
         self.sprite = pygame.Surface(self.size, pygame.SRCALPHA)
         
         w, h = self.size

@@ -13,6 +13,7 @@ from ..entity import Entity, EntityConfig, EntityPersistence
 from ...core.settings import TILE_SIZE
 from ...multiverse.causal_node import CausalNode, CausalOperator, EntityState
 from ...core.events import EventSystem, GameEvent
+from ...utils.sprite_loader import load_entity_sprite
 
 
 class Shade(Entity):
@@ -25,9 +26,10 @@ class Shade(Entity):
                  causal_origin_id: str = None,
                  patrol_points: List[Tuple[float, float]] = None):
         """Initialize a Shade."""
+        scaled_size = max(1, int(round((TILE_SIZE - 8) * 1.3225)))
         config = EntityConfig(
             position=position,
-            size=(TILE_SIZE - 8, TILE_SIZE - 8),
+            size=(scaled_size, scaled_size),
             color=(80, 40, 100),
             persistence=EntityPersistence.EXCLUSIVE,
             solid=True,
@@ -74,6 +76,11 @@ class Shade(Entity):
     
     def _create_shade_sprite(self) -> None:
         """Create the Shade's visual appearance."""
+        loaded = load_entity_sprite("enemy_shade.png", self.size)
+        if loaded is not None:
+            self.sprite = loaded
+            return
+
         self.sprite = pygame.Surface(self.size, pygame.SRCALPHA)
         
         w, h = self.size

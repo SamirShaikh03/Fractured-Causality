@@ -280,6 +280,17 @@ class Game:
         
         # Update multiverse
         self.multiverse.update(self.dt)
+
+        # Feed player position to enemies that track or hunt the player.
+        if self.current_level:
+            player_pos = (self.player.x, self.player.y)
+            for entity in self.current_level.get_entities():
+                if not entity.exists:
+                    continue
+                if hasattr(entity, 'set_player_position'):
+                    entity.set_player_position(player_pos)
+                if hasattr(entity, 'record_player_position'):
+                    entity.record_player_position(player_pos)
         
         # Update current level
         if self.current_level:
@@ -465,7 +476,7 @@ class Game:
                     if not hasattr(entity, '_last_damage_time'):
                         entity._last_damage_time = -ENEMY_ATTACK_COOLDOWN
                     
-                    time_since_damage = self.current_level._elapsed - entity._last_damage_time
+                    time_since_damage = self.current_level.completion_time - entity._last_damage_time
                     if time_since_damage >= ENEMY_ATTACK_COOLDOWN:
                         # Calculate knockback from enemy to player
                         dx = self.player.x - entity.x
@@ -478,7 +489,7 @@ class Game:
                         
                         damage = getattr(entity, 'damage', ENEMY_BASE_DAMAGE)
                         self.player.take_damage(damage, knockback_dir)
-                        entity._last_damage_time = self.current_level._elapsed
+                        entity._last_damage_time = self.current_level.completion_time
     
     def _check_attack_hits(self) -> None:
         """Check if player's attack hits any enemies."""

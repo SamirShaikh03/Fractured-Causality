@@ -15,6 +15,7 @@ from ...core.settings import TILE_SIZE
 from ...multiverse.causal_node import EntityState
 from ...multiverse.universe import UniverseType
 from ...core.events import EventSystem, GameEvent
+from ...utils.sprite_loader import load_entity_sprite
 
 
 class EchoWalker(Entity):
@@ -24,9 +25,10 @@ class EchoWalker(Entity):
                  echo_delay: float = 2.0,
                  home_universe: UniverseType = UniverseType.ECHO):
         """Initialize an Echo Walker."""
+        scaled_size = max(1, int(round((TILE_SIZE - 12) * 1.3225)))
         config = EntityConfig(
             position=position,
-            size=(TILE_SIZE - 12, TILE_SIZE - 12),
+            size=(scaled_size, scaled_size),
             color=(100, 180, 200),
             persistence=EntityPersistence.ANCHORED,
             solid=True,
@@ -67,6 +69,11 @@ class EchoWalker(Entity):
     
     def _create_sprite(self) -> None:
         """Create the Echo Walker's appearance."""
+        loaded = load_entity_sprite("enemy_echo_walker.png", self.size)
+        if loaded is not None:
+            self.sprite = loaded
+            return
+
         self.sprite = pygame.Surface(self.size, pygame.SRCALPHA)
         
         w, h = self.size
