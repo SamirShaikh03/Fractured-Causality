@@ -1,10 +1,3 @@
-"""
-Shade - An enemy bound to a causal origin.
-
-Shades exist because of something else in another universe.
-They cannot be killed directly - only by preventing their origin.
-"""
-
 import pygame
 from typing import Tuple, Optional, List
 import math
@@ -17,15 +10,12 @@ from ...utils.sprite_loader import load_entity_sprite
 
 
 class Shade(Entity):
-    """Enemy bound to a causal origin. Defeated by destroying their origin."""
-    
     def __init__(self, position: Tuple[float, float],
                  origin_id: str = None,
                  patrol_path: List[Tuple[float, float]] = None,
                  shade_id: str = None,
                  causal_origin_id: str = None,
                  patrol_points: List[Tuple[float, float]] = None):
-        """Initialize a Shade."""
         scaled_size = max(1, int(round((TILE_SIZE - 8) * 1.3225)))
         config = EntityConfig(
             position=position,
@@ -36,46 +26,35 @@ class Shade(Entity):
             interactive=False
         )
         super().__init__(config)
-        
-        # Support both parameter names
         actual_origin = causal_origin_id or origin_id or ""
         actual_patrol = patrol_points or patrol_path or [position]
         
-        # Set entity ID if provided
         if shade_id:
             self.entity_id = shade_id
-        
-        # Mark as enemy for combat system
         self.is_enemy = True
         self.health: int = 50
         self.max_health: int = 50
-        self.damage: int = 10  # Damage dealt to player on contact
+        self.damage: int = 10
         
-        # Causal origin
         self.origin_id: str = actual_origin
         self.origin_exists: bool = True
-        
-        # Patrol behavior
+
         self.patrol_path: List[Tuple[float, float]] = actual_patrol
         self.current_patrol_index: int = 0
-        self.patrol_speed: float = 50.0  # pixels per second
+        self.patrol_speed: float = 50.0 
         self.patrol_wait_time: float = 1.0
         self._patrol_wait_timer: float = 0.0
         self._is_waiting: bool = False
-        
-        # Visual state
+
         self._opacity: float = 1.0
         self._flicker_timer: float = 0.0
         self._is_fading: bool = False
-        
-        # Create causal node
+
         self.create_causal_node(paradox_weight=10.0)
-        
-        # Create sprite
+
         self._create_shade_sprite()
     
     def _create_shade_sprite(self) -> None:
-        """Create the Shade's visual appearance."""
         loaded = load_entity_sprite("enemy_shade.png", self.size)
         if loaded is not None:
             self.sprite = loaded
@@ -86,14 +65,12 @@ class Shade(Entity):
         w, h = self.size
         center = (w // 2, h // 2)
         
-        # Shadowy body
         for i in range(3):
             radius = w // 2 - i * 4
             alpha = 150 - i * 40
             color = (80 - i * 20, 40 - i * 10, 100 - i * 20, alpha)
             pygame.draw.circle(self.sprite, color, center, radius)
         
-        # Glowing eyes
         eye_y = h // 3
         pygame.draw.circle(self.sprite, (200, 50, 50), (w // 3, eye_y), 4)
         pygame.draw.circle(self.sprite, (200, 50, 50), (2 * w // 3, eye_y), 4)
@@ -101,15 +78,7 @@ class Shade(Entity):
         pygame.draw.circle(self.sprite, (255, 100, 100), (2 * w // 3, eye_y), 2)
     
     def set_origin(self, origin_id: str, causal_graph) -> None:
-        """
-        Set the causal origin and create the dependency.
-        
-        Args:
-            origin_id: ID of the origin entity
-            causal_graph: The causal graph to register with
-        """
         self.origin_id = origin_id
-        
         if self.causal_node:
             causal_graph.add_dependency(
                 origin_id,
@@ -118,14 +87,11 @@ class Shade(Entity):
             )
     
     def update(self, dt: float) -> None:
-        """Update the Shade."""
+
         if not self.exists:
             return
         
-        # Visual effects
         self._flicker_timer += dt
-        
-        # Flicker when origin is threatened
         if not self.origin_exists:
             self._is_fading = True
             self._opacity = max(0, self._opacity - dt * 2)
@@ -133,16 +99,13 @@ class Shade(Entity):
                 self.destroy()
                 return
         else:
-            # Subtle flicker
             self._opacity = 0.8 + 0.2 * math.sin(self._flicker_timer * 3)
         
-        # Patrol behavior
         self._update_patrol(dt)
         
         super().update(dt)
     
     def _update_patrol(self, dt: float) -> None:
-        """Update patrol movement."""
         if len(self.patrol_path) < 2:
             return
         
@@ -155,18 +118,15 @@ class Shade(Entity):
                 )
             return
         
-        # Move toward current patrol point
         target = self.patrol_path[self.current_patrol_index]
         dx = target[0] - self.x
         dy = target[1] - self.y
         distance = math.sqrt(dx * dx + dy * dy)
         
         if distance < 5:
-            # Reached point, wait
             self._is_waiting = True
             self._patrol_wait_timer = self.patrol_wait_time
         else:
-            # Move toward target
             speed = self.patrol_speed * dt
             if speed > distance:
                 speed = distance
@@ -177,11 +137,9 @@ class Shade(Entity):
             )
     
     def on_causal_change(self, new_state: EntityState, source_id: str = None) -> None:
-        """Handle causal state changes."""
         if source_id == self.origin_id:
             if new_state == EntityState.DESTROYED:
                 self.origin_exists = False
-                # Don't immediately destroy - fade out
                 self._is_fading = True
                 
                 EventSystem.emit(GameEvent.ENTITY_STATE_CHANGED, {
@@ -190,20 +148,10 @@ class Shade(Entity):
                     "origin_id": self.origin_id
                 })
         
-        # Let parent handle other state changes
         if new_state == EntityState.DESTROYED and source_id != self.origin_id:
             super().on_causal_change(new_state, source_id)
     
     def take_damage(self, amount: int) -> bool:
-        """
-        Take damage from an attack.
-        
-        Args:
-            amount: Amount of damage to take
-            
-        Returns:
-            True if the enemy was defeated
-        """
         self.health -= amount
         if self.health <= 0:
             self.health = 0
@@ -218,7 +166,6 @@ class Shade(Entity):
     
     def render(self, surface: pygame.Surface,
                camera_offset: Tuple[int, int] = (0, 0)) -> None:
-        """Render the Shade with effects."""
         if not self.visible or not self.exists:
             return
         
@@ -226,7 +173,6 @@ class Shade(Entity):
         render_x = int(self.x - ox)
         render_y = int(self.y - oy)
         
-        # Apply opacity
         if self._opacity < 1.0:
             temp_sprite = self.sprite.copy()
             temp_sprite.set_alpha(int(255 * self._opacity))
@@ -234,7 +180,6 @@ class Shade(Entity):
         else:
             surface.blit(self.sprite, (render_x, render_y))
         
-        # Fading effect - particles rising
         if self._is_fading:
             for i in range(3):
                 particle_y = render_y - int(self._flicker_timer * 20) % 30 - i * 10
@@ -246,7 +191,6 @@ class Shade(Entity):
                 surface.blit(particle_surface, (particle_x, particle_y))
     
     def serialize(self) -> dict:
-        """Serialize Shade state."""
         data = super().serialize()
         data.update({
             "origin_id": self.origin_id,
@@ -258,7 +202,6 @@ class Shade(Entity):
     
     @classmethod
     def deserialize(cls, data: dict) -> 'Shade':
-        """Deserialize Shade from save data."""
         shade = cls(
             position=tuple(data["position"]),
             origin_id=data.get("origin_id"),

@@ -1,8 +1,4 @@
-"""
-Particle System - Lightweight particle effects.
-
-Handles simple particle effects for visual feedback.
-"""
+   
 
 import pygame
 import random
@@ -13,7 +9,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Particle:
-    """A single particle."""
+                            
     x: float
     y: float
     vx: float
@@ -30,17 +26,17 @@ class Particle:
 
 @dataclass
 class ParticleEmitter:
-    """Configuration for a particle emitter."""
+                                               
     x: float
     y: float
-    rate: float  # Particles per second
+    rate: float                        
     color: Tuple[int, int, int]
     color_variance: int = 20
     size_min: float = 2.0
     size_max: float = 6.0
     speed_min: float = 20.0
     speed_max: float = 80.0
-    angle_min: float = 0.0  # In radians
+    angle_min: float = 0.0              
     angle_max: float = 2 * math.pi
     life_min: float = 0.5
     life_max: float = 1.5
@@ -48,27 +44,14 @@ class ParticleEmitter:
     friction: float = 0.98
     active: bool = True
     timer: float = 0.0
-    duration: float = -1  # -1 = infinite
+    duration: float = -1                 
 
 
 class ParticleSystem:
-    """
-    Manages particle effects.
-    
-    Features:
-    - Multiple particle types
-    - Emitters for continuous effects
-    - Burst effects
-    - Efficient batch rendering
-    """
+       
     
     def __init__(self, max_particles: int = 1000):
-        """
-        Initialize the particle system.
-        
-        Args:
-            max_particles: Maximum simultaneous particles
-        """
+           
         self.max_particles = max_particles
         self._particles: List[Particle] = []
         self._emitters: List[ParticleEmitter] = []
@@ -80,22 +63,7 @@ class ParticleSystem:
               life: float = 1.0,
               gravity: float = 0.0,
               friction: float = 1.0) -> Optional[Particle]:
-        """
-        Spawn a single particle.
-        
-        Args:
-            x: X position
-            y: Y position
-            color: Particle color
-            velocity: Initial velocity (vx, vy)
-            size: Particle size
-            life: Lifetime in seconds
-            gravity: Gravity acceleration
-            friction: Velocity friction
-            
-        Returns:
-            The spawned particle, or None if at limit
-        """
+           
         if len(self._particles) >= self.max_particles:
             return None
         
@@ -122,39 +90,22 @@ class ParticleSystem:
               angle_range: Tuple[float, float] = (0, 2 * math.pi),
               gravity: float = 100,
               color_variance: int = 20) -> List[Particle]:
-        """
-        Spawn a burst of particles.
-        
-        Args:
-            x: Center X position
-            y: Center Y position
-            count: Number of particles
-            color: Base color
-            speed_range: (min, max) speed
-            size_range: (min, max) size
-            life_range: (min, max) lifetime
-            angle_range: (min, max) angle in radians
-            gravity: Gravity for particles
-            color_variance: Random color variance
-            
-        Returns:
-            List of spawned particles
-        """
+           
         particles = []
         
         for _ in range(count):
             if len(self._particles) >= self.max_particles:
                 break
             
-            # Random angle and speed
+                                    
             angle = random.uniform(*angle_range)
             speed = random.uniform(*speed_range)
             
-            # Velocity
+                      
             vx = math.cos(angle) * speed
             vy = math.sin(angle) * speed
             
-            # Random color variation
+                                    
             r = max(0, min(255, color[0] + random.randint(-color_variance, color_variance)))
             g = max(0, min(255, color[1] + random.randint(-color_variance, color_variance)))
             b = max(0, min(255, color[2] + random.randint(-color_variance, color_variance)))
@@ -181,19 +132,7 @@ class ParticleSystem:
                       rate: float,
                       color: Tuple[int, int, int],
                       **kwargs) -> ParticleEmitter:
-        """
-        Create a particle emitter.
-        
-        Args:
-            x: Emitter X position
-            y: Emitter Y position
-            rate: Particles per second
-            color: Base particle color
-            **kwargs: Additional emitter settings
-            
-        Returns:
-            The created emitter
-        """
+           
         emitter = ParticleEmitter(
             x=x, y=y,
             rate=rate,
@@ -205,20 +144,15 @@ class ParticleSystem:
         return emitter
     
     def remove_emitter(self, emitter: ParticleEmitter) -> None:
-        """Remove an emitter."""
+                                
         if emitter in self._emitters:
             self._emitters.remove(emitter)
     
     def update(self, dt: float) -> None:
-        """
-        Update all particles and emitters.
-        
-        Args:
-            dt: Delta time
-        """
-        # Update particles
+           
+                          
         for particle in self._particles[:]:
-            # Physics
+                     
             particle.vy += particle.gravity * dt
             particle.vx *= particle.friction
             particle.vy *= particle.friction
@@ -226,25 +160,25 @@ class ParticleSystem:
             particle.x += particle.vx * dt
             particle.y += particle.vy * dt
             
-            # Lifetime
+                      
             particle.life -= dt
             
             if particle.life <= 0:
                 self._particles.remove(particle)
         
-        # Update emitters
+                         
         for emitter in self._emitters[:]:
             if not emitter.active:
                 continue
             
-            # Check duration
+                            
             if emitter.duration > 0:
                 emitter.duration -= dt
                 if emitter.duration <= 0:
                     self._emitters.remove(emitter)
                     continue
             
-            # Spawn particles
+                             
             emitter.timer += dt
             spawn_interval = 1.0 / emitter.rate if emitter.rate > 0 else float('inf')
             
@@ -253,17 +187,17 @@ class ParticleSystem:
                 self._spawn_from_emitter(emitter)
     
     def _spawn_from_emitter(self, emitter: ParticleEmitter) -> None:
-        """Spawn a particle from an emitter."""
+                                               
         if len(self._particles) >= self.max_particles:
             return
         
-        # Random values
+                       
         angle = random.uniform(emitter.angle_min, emitter.angle_max)
         speed = random.uniform(emitter.speed_min, emitter.speed_max)
         size = random.uniform(emitter.size_min, emitter.size_max)
         life = random.uniform(emitter.life_min, emitter.life_max)
         
-        # Color with variance
+                             
         v = emitter.color_variance
         color = (
             max(0, min(255, emitter.color[0] + random.randint(-v, v))),
@@ -288,23 +222,17 @@ class ParticleSystem:
     
     def render(self, surface: pygame.Surface,
                camera_offset: Tuple[int, int] = (0, 0)) -> None:
-        """
-        Render all particles.
-        
-        Args:
-            surface: Target surface
-            camera_offset: Camera offset
-        """
+           
         ox, oy = camera_offset
         
         for particle in self._particles:
-            # Calculate alpha based on life
+                                           
             if particle.fade:
                 alpha = int(255 * (particle.life / particle.max_life))
             else:
                 alpha = 255
             
-            # Calculate size
+                            
             if particle.shrink:
                 size = particle.size * (particle.life / particle.max_life)
             else:
@@ -312,18 +240,18 @@ class ParticleSystem:
             
             size = max(1, int(size))
             
-            # Screen position
+                             
             screen_x = int(particle.x - ox)
             screen_y = int(particle.y - oy)
             
-            # Skip if off screen
+                                
             if (screen_x < -size or screen_x > surface.get_width() + size or
                 screen_y < -size or screen_y > surface.get_height() + size):
                 continue
             
-            # Draw particle
+                           
             if alpha >= 250:
-                # Full opacity - simple draw
+                                            
                 pygame.draw.circle(
                     surface,
                     particle.color,
@@ -331,7 +259,7 @@ class ParticleSystem:
                     size
                 )
             else:
-                # With alpha - need surface
+                                           
                 particle_surface = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
                 pygame.draw.circle(
                     particle_surface,
@@ -349,23 +277,7 @@ class ParticleSystem:
              size_range: Tuple[float, float] = (2, 6),
              gravity: float = 80,
              color_variance: int = 20) -> List[Particle]:
-        """
-        Emit a burst of particles (convenience wrapper).
-        
-        Args:
-            x: Center X position
-            y: Center Y position
-            count: Number of particles
-            color: Base color
-            speed: Max speed of particles
-            lifetime: Max lifetime of particles
-            size_range: (min, max) size
-            gravity: Gravity for particles
-            color_variance: Random color variance
-            
-        Returns:
-            List of spawned particles
-        """
+           
         return self.burst(
             x, y, count, color,
             speed_range=(speed * 0.3, speed),
@@ -376,16 +288,16 @@ class ParticleSystem:
         )
 
     def clear(self) -> None:
-        """Clear all particles and emitters."""
+                                               
         self._particles.clear()
         self._emitters.clear()
     
     @property
     def particle_count(self) -> int:
-        """Get current particle count."""
+                                         
         return len(self._particles)
     
     @property
     def emitter_count(self) -> int:
-        """Get current emitter count."""
+                                        
         return len(self._emitters)

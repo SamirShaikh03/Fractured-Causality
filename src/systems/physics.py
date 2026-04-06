@@ -1,8 +1,4 @@
-"""
-Physics System - Handles collision detection and resolution.
-
-Provides tile-based and entity collision detection.
-"""
+   
 
 import pygame
 from typing import List, Tuple, Optional
@@ -15,7 +11,7 @@ from ..entities.entity import Entity
 
 @dataclass
 class CollisionResult:
-    """Result of a collision check."""
+                                      
     collided: bool = False
     tile_type: TileType = None
     entity: Entity = None
@@ -24,42 +20,22 @@ class CollisionResult:
 
 
 class PhysicsSystem:
-    """
-    Handles all physics and collision detection.
-    
-    Features:
-    - Tile-based collision
-    - Entity-entity collision
-    - AABB collision detection
-    - Collision resolution
-    """
+       
     
     def __init__(self):
-        """Initialize the physics system."""
-        self._gravity: float = 0.0  # Top-down game, no gravity
+                                            
+        self._gravity: float = 0.0                             
     
     def check_tile_collision(self, x: float, y: float,
                             width: float, height: float,
                             universe: Universe) -> List[CollisionResult]:
-        """
-        Check collision against tiles.
-        
-        Args:
-            x: Entity X position
-            y: Entity Y position
-            width: Entity width
-            height: Entity height
-            universe: Current universe
-            
-        Returns:
-            List of collision results
-        """
+           
         results = []
         
         if not universe or not universe.tilemap:
             return results
         
-        # Get tile bounds to check
+                                  
         left_tile = max(0, int(x / TILE_SIZE))
         right_tile = min(universe.width - 1, int((x + width) / TILE_SIZE))
         top_tile = max(0, int(y / TILE_SIZE))
@@ -71,7 +47,7 @@ class PhysicsSystem:
             for tx in range(left_tile, right_tile + 1):
                 tile_type = universe.tilemap.get_tile(tx, ty)
                 
-                # Check if tile is solid
+                                        
                 if tile_type in [TileType.WALL, TileType.PIT]:
                     tile_rect = pygame.Rect(
                         tx * TILE_SIZE, ty * TILE_SIZE,
@@ -79,13 +55,13 @@ class PhysicsSystem:
                     )
                     
                     if entity_rect.colliderect(tile_rect):
-                        # Calculate collision normal and penetration
+                                                                    
                         result = CollisionResult(
                             collided=True,
                             tile_type=tile_type
                         )
                         
-                        # Determine collision direction
+                                                       
                         dx = (entity_rect.centerx - tile_rect.centerx)
                         dy = (entity_rect.centery - tile_rect.centery)
                         
@@ -102,16 +78,7 @@ class PhysicsSystem:
     
     def check_entity_collision(self, entity: Entity,
                                other_entities: List[Entity]) -> List[CollisionResult]:
-        """
-        Check collision against other entities.
-        
-        Args:
-            entity: The entity to check
-            other_entities: List of other entities
-            
-        Returns:
-            List of collision results
-        """
+           
         results = []
         
         entity_rect = pygame.Rect(entity.x, entity.y, entity.width, entity.height)
@@ -131,7 +98,7 @@ class PhysicsSystem:
                     entity=other
                 )
                 
-                # Calculate collision normal
+                                            
                 dx = entity_rect.centerx - other_rect.centerx
                 dy = entity_rect.centery - other_rect.centery
                 
@@ -148,16 +115,7 @@ class PhysicsSystem:
     
     def resolve_collision(self, entity: Entity,
                          collision: CollisionResult) -> Tuple[float, float]:
-        """
-        Resolve a collision by moving the entity out of penetration.
-        
-        Args:
-            entity: The entity to resolve
-            collision: The collision to resolve
-            
-        Returns:
-            New position (x, y)
-        """
+           
         if not collision.collided:
             return (entity.x, entity.y)
         
@@ -169,26 +127,21 @@ class PhysicsSystem:
     def move_and_slide(self, entity: Entity, velocity: Tuple[float, float],
                        universe: Universe, other_entities: List[Entity],
                        dt: float) -> Tuple[float, float]:
-        """
-        Move an entity and slide along obstacles.
-        
-        Args:
-            entity: The entity to move
-            velocity: Movement velocity (x, y)
-            universe: Current universe
-            other_entities: Other entities to check
-            dt: Delta time
-            
-        Returns:
-            Final position (x, y)
-        """
+           
         vx, vy = velocity
+
+                                                                          
+                                                                         
+        if getattr(entity, "is_phasing", False):
+            entity.x = entity.x + vx * dt
+            entity.y = entity.y + vy * dt
+            return (entity.x, entity.y)
         
-        # Move horizontally first
+                                 
         new_x = entity.x + vx * dt
         entity.x = new_x
         
-        # Check horizontal collisions
+                                     
         h_collisions = self.check_tile_collision(
             new_x, entity.y, entity.width, entity.height, universe
         )
@@ -199,11 +152,11 @@ class PhysicsSystem:
                 new_x, _ = self.resolve_collision(entity, collision)
                 entity.x = new_x
         
-        # Move vertically
+                         
         new_y = entity.y + vy * dt
         entity.y = new_y
         
-        # Check vertical collisions
+                                   
         v_collisions = self.check_tile_collision(
             entity.x, new_y, entity.width, entity.height, universe
         )
@@ -220,27 +173,14 @@ class PhysicsSystem:
                          width: float, height: float,
                          universe: Universe,
                          other_entities: List[Entity] = None) -> bool:
-        """
-        Check if a position is valid (no collisions).
-        
-        Args:
-            x: X position
-            y: Y position
-            width: Width
-            height: Height
-            universe: Current universe
-            other_entities: Other entities to check
-            
-        Returns:
-            True if position is valid
-        """
-        # Check tile collisions
+           
+                               
         tile_collisions = self.check_tile_collision(x, y, width, height, universe)
         for collision in tile_collisions:
             if collision.tile_type == TileType.WALL:
                 return False
         
-        # Check entity collisions
+                                 
         if other_entities:
             dummy = Entity.__new__(Entity)
             dummy.x = x
@@ -260,19 +200,8 @@ class PhysicsSystem:
                 direction: Tuple[float, float],
                 max_distance: float,
                 universe: Universe) -> Optional[Tuple[float, float, TileType]]:
-        """
-        Cast a ray and find first intersection.
-        
-        Args:
-            start: Starting position
-            direction: Direction vector (normalized)
-            max_distance: Maximum ray distance
-            universe: Current universe
-            
-        Returns:
-            (hit_x, hit_y, tile_type) or None
-        """
-        # Simple ray marching
+           
+                             
         step = TILE_SIZE / 4
         distance = 0
         
@@ -280,7 +209,7 @@ class PhysicsSystem:
         dx, dy = direction
         
         while distance < max_distance:
-            # Check current position
+                                    
             tile_x = int(x / TILE_SIZE)
             tile_y = int(y / TILE_SIZE)
             
@@ -290,7 +219,7 @@ class PhysicsSystem:
                 if tile_type == TileType.WALL:
                     return (x, y, tile_type)
             
-            # Step forward
+                          
             x += dx * step
             y += dy * step
             distance += step
@@ -298,15 +227,15 @@ class PhysicsSystem:
         return None
     
     def check_overlap(self, rect1: pygame.Rect, rect2: pygame.Rect) -> bool:
-        """Check if two rectangles overlap."""
+                                              
         return rect1.colliderect(rect2)
     
     def get_tile_at(self, x: float, y: float, universe: Universe) -> TileType:
-        """Get the tile type at a world position."""
+                                                    
         tile_x = int(x / TILE_SIZE)
         tile_y = int(y / TILE_SIZE)
         
         if 0 <= tile_x < universe.width and 0 <= tile_y < universe.height:
             return universe.tilemap.get_tile(tile_x, tile_y)
         
-        return TileType.WALL  # Out of bounds = wall
+        return TileType.WALL                        

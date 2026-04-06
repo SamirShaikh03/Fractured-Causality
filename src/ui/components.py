@@ -1,7 +1,4 @@
-"""Reusable UI drawing components.
-
-Provides shared panel and stat-box primitives used by HUD/Menu/overlays.
-"""
+   
 
 import pygame
 
@@ -10,7 +7,7 @@ from .design_system import UI_CONTAINER, UI_PALETTE, UI_SPACING
 
 
 def get_ui_scale(surface: pygame.Surface) -> float:
-    """Compute scale factor relative to base resolution."""
+                                                           
     return min(
         surface.get_width() / SCREEN_WIDTH,
         surface.get_height() / SCREEN_HEIGHT,
@@ -18,7 +15,7 @@ def get_ui_scale(surface: pygame.Surface) -> float:
 
 
 def sx(value: int, scale: float) -> int:
-    """Scale helper returning at least one pixel for positive values."""
+                                                                        
     if value <= 0:
         return 0
     return max(1, int(round(value * scale)))
@@ -28,7 +25,7 @@ def draw_panel(surface: pygame.Surface, rect: pygame.Rect,
                bg_color=None, border_color=None,
                border_width: int = None, radius: int = None,
                alpha: int = 235) -> None:
-    """Draw a standard panel with consistent border treatment."""
+                                                                 
     bg = bg_color or UI_PALETTE.panel
     border = border_color or UI_PALETTE.border
     width = UI_CONTAINER.border if border_width is None else border_width
@@ -46,7 +43,7 @@ def draw_stat_box(surface: pygame.Surface, rect: pygame.Rect,
                   label_font, value_font,
                   accent_color=None,
                   text_color=None) -> None:
-    """Draw a reusable stat display with label/value hierarchy."""
+                                                                  
     accent = accent_color or UI_PALETTE.border
     text = text_color or UI_PALETTE.text_primary
 
@@ -67,7 +64,7 @@ def draw_stat_box(surface: pygame.Surface, rect: pygame.Rect,
 def draw_center_label_box(surface: pygame.Surface, rect: pygame.Rect,
                           text: str, font,
                           border_color=None, text_color=None) -> None:
-    """Draw a centered label in a shared top-bar box style."""
+                                                              
     border = border_color or UI_PALETTE.border
     fg = text_color or UI_PALETTE.text_primary
 
@@ -79,7 +76,7 @@ def draw_center_label_box(surface: pygame.Surface, rect: pygame.Rect,
 
 
 def draw_bottom_bar(surface: pygame.Surface, text: str, font) -> None:
-    """Draw a consistent bottom instruction bar."""
+                                                   
     scale = get_ui_scale(surface)
     margin = sx(UI_SPACING.large, scale)
     height = sx(22, scale)
@@ -99,13 +96,7 @@ def draw_bottom_bar(surface: pygame.Surface, text: str, font) -> None:
 
 
 def hud_layout(surface: pygame.Surface) -> dict:
-    """Shared HUD layout contract.
-
-    Top-left: paradox and keys
-    Top-center: universe/world label
-    Top-right: health
-    Bottom: controls/help
-    """
+       
     scale = get_ui_scale(surface)
     margin = sx(UI_SPACING.large, scale)
     gap = sx(UI_SPACING.medium, scale)

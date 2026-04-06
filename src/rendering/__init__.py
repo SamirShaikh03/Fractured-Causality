@@ -1,6 +1,4 @@
-"""
-Rendering System - Module for all rendering components.
-"""
+   
 
 from .renderer import Renderer
 from .effects import EffectsManager

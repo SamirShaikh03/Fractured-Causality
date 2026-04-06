@@ -1,12 +1,3 @@
-"""
-Level 09 - The Final Rift
-
-The ultimate challenge - everything at stake.
-
-Theme: The boundary between realities is collapsing.
-Goal: Seal the rift by collecting all fragments across universes.
-"""
-
 import pygame
 from typing import List
 
@@ -28,24 +19,6 @@ from ..core.events import EventSystem, GameEvent
 
 
 class Level09(Level):
-    """
-    The Final Rift - Ultimate Challenge
-
-    Combines ALL mechanics:
-    1. Complex three-universe maze
-    2. Multiple enemy types across realities
-    3. Causal chains with inverse effects
-    4. Stone puzzles and tree dependencies
-    5. High paradox pressure throughout
-
-    Layout:
-    - Spiraling path toward center
-    - Outer ring: hazardous terrain
-    - Middle ring: enemy gauntlet
-    - Inner ring: puzzle chambers
-    - Center: the Rift (exit)
-    """
-
     def __init__(self, multiverse: MultiverseManager):
         config = LevelConfig(
             level_id="level_09",
@@ -78,7 +51,6 @@ class Level09(Level):
         w, h = self.config.width, self.config.height
         tiles = [[TileType.WALL for _ in range(w)] for _ in range(h)]
 
-        # Border
         for x in range(w):
             tiles[0][x] = TileType.WALL
             tiles[h - 1][x] = TileType.WALL
@@ -86,7 +58,6 @@ class Level09(Level):
             tiles[y][0] = TileType.WALL
             tiles[y][w - 1] = TileType.WALL
 
-        # Outer ring - perimeter path
         for x in range(1, w - 1):
             tiles[1][x] = TileType.FLOOR
             tiles[2][x] = TileType.FLOOR
@@ -98,7 +69,6 @@ class Level09(Level):
             tiles[y][w - 2] = TileType.FLOOR
             tiles[y][w - 3] = TileType.FLOOR
 
-        # Middle ring
         for x in range(5, w - 5):
             tiles[5][x] = TileType.FLOOR
             tiles[6][x] = TileType.FLOOR
@@ -110,74 +80,58 @@ class Level09(Level):
             tiles[y][w - 6] = TileType.FLOOR
             tiles[y][w - 7] = TileType.FLOOR
 
-        # Inner ring / center area
         for y in range(9, h - 9):
             for x in range(9, w - 9):
                 tiles[y][x] = TileType.FLOOR
 
-        # Connections between rings (corridors)
-        # Bottom connector (outer to middle)
         for y in range(h - 6, h - 2):
             tiles[y][8] = TileType.FLOOR
             tiles[y][9] = TileType.FLOOR
 
-        # Left connector (outer to middle)
         for x in range(2, 6):
             tiles[10][x] = TileType.FLOOR
             tiles[11][x] = TileType.FLOOR
 
-        # Top connector (outer to middle)
         for y in range(2, 6):
             tiles[y][16] = TileType.FLOOR
             tiles[y][17] = TileType.FLOOR
 
-        # Right connector (outer to middle)
         for x in range(w - 6, w - 2):
             tiles[12][x] = TileType.FLOOR
             tiles[13][x] = TileType.FLOOR
 
-        # Middle to inner connectors
-        # Left
         for x in range(6, 10):
             tiles[12][x] = TileType.FLOOR
 
-        # Top
         for y in range(6, 10):
             tiles[y][15] = TileType.FLOOR
 
-        # Right
         for x in range(w - 10, w - 6):
             tiles[12][x] = TileType.FLOOR
 
-        # Bottom
         for y in range(h - 10, h - 6):
             tiles[y][16] = TileType.FLOOR
 
-        # Inner rooms dividers
         for y in range(9, 15):
             if y != 12:
                 tiles[y][14] = TileType.WALL
                 tiles[y][18] = TileType.WALL
 
-        # Universe-specific terrain
         if u_type == UniverseType.PRIME:
-            # Outer ring top has pits
             for x in range(10, 22):
                 tiles[1][x] = TileType.PIT
-            # Middle ring right has hazards
+
             for y in range(7, 11):
                 tiles[y][w - 6] = TileType.HAZARD
 
         elif u_type == UniverseType.ECHO:
-            # Outer ring bottom has pits
             for x in range(10, 22):
                 tiles[h - 2][x] = TileType.PIT
-            # Middle ring left has hazards
+
             for y in range(12, 17):
                 tiles[y][5] = TileType.HAZARD
 
         elif u_type == UniverseType.FRACTURE:
-            # Scattered pits in middle ring
             pit_spots = [
                 (8, 6), (12, 5), (20, 6), (24, 5),
                 (8, h - 7), (12, h - 6), (20, h - 7), (24, h - 6)
@@ -185,7 +139,7 @@ class Level09(Level):
             for px, py in pit_spots:
                 if 0 < py < h - 1 and 0 < px < w - 1:
                     tiles[py][px] = TileType.PIT
-            # Hazards surrounding inner chamber
+
             for x in range(10, 22):
                 tiles[9][x] = TileType.HAZARD
                 tiles[h - 10][x] = TileType.HAZARD
@@ -193,21 +147,18 @@ class Level09(Level):
         return tiles
 
     def _place_entities(self) -> None:
-        # --- KEY 1: Outer ring, top-right corner ---
         key1 = Key(
             position=(29 * TILE_SIZE, 2 * TILE_SIZE),
             key_id="key_09_a"
         )
         self.add_entity(key1, [UniverseType.PRIME, UniverseType.ECHO, UniverseType.FRACTURE])
 
-        # --- KEY 2: Middle ring, guarded by shade ---
         key2 = Key(
             position=(6 * TILE_SIZE, 6 * TILE_SIZE),
             key_id="key_09_b"
         )
         self.add_entity(key2, [UniverseType.PRIME, UniverseType.ECHO, UniverseType.FRACTURE])
 
-        # Rift Tree in inner chamber left
         rift_tree = Tree(
             position=(11 * TILE_SIZE, 11 * TILE_SIZE),
             tree_id="rift_tree",
@@ -215,7 +166,6 @@ class Level09(Level):
         )
         self.add_entity(rift_tree, [UniverseType.PRIME])
 
-        # Shade dependent on rift tree, guarding key 2
         shade = Shade(
             position=(7 * TILE_SIZE, 6 * TILE_SIZE),
             shade_id="shade_09",
@@ -229,21 +179,18 @@ class Level09(Level):
         )
         self.add_entity(shade, [UniverseType.PRIME])
 
-        # --- KEY 3: Inner chamber right, behind door ---
         key3 = Key(
             position=(20 * TILE_SIZE, 11 * TILE_SIZE),
             key_id="key_09_c"
         )
         self.add_entity(key3, [UniverseType.PRIME, UniverseType.ECHO, UniverseType.FRACTURE])
 
-        # --- KEY 4: Fracture-only, in center of inner ring ---
         key4 = Key(
             position=(16 * TILE_SIZE, 14 * TILE_SIZE),
             key_id="key_09_d"
         )
         self.add_entity(key4, [UniverseType.FRACTURE])
 
-        # Enemies across the map
         walker1 = EchoWalker(
             position=(20 * TILE_SIZE, 2 * TILE_SIZE),
             echo_delay=1.5
@@ -268,7 +215,6 @@ class Level09(Level):
         )
         self.add_entity(shade2, [UniverseType.PRIME])
 
-        # Switches and doors
         switch_inner = EchoSwitch(
             position=(12 * TILE_SIZE, 12 * TILE_SIZE),
             switch_id="switch_09_inner",
@@ -284,14 +230,12 @@ class Level09(Level):
         )
         self.add_entity(door_inner, [UniverseType.PRIME, UniverseType.ECHO, UniverseType.FRACTURE])
 
-        # Causal stone for puzzle
         stone = CausalStone(
             position=(10 * TILE_SIZE, 12 * TILE_SIZE),
             stone_id="stone_09"
         )
         self.add_entity(stone, [UniverseType.PRIME, UniverseType.ECHO, UniverseType.FRACTURE])
 
-        # Exit - The Rift
         exit_portal = ExitPortal(
             position=(16 * TILE_SIZE, 12 * TILE_SIZE),
             portal_id="exit_09",
@@ -302,14 +246,12 @@ class Level09(Level):
     def _setup_causality(self) -> None:
         causal_graph = self.multiverse.causal_graph
 
-        # Tree -> Shade
         causal_graph.add_dependency(
             source_id="rift_tree",
             target_id="shade_09",
             operator=CausalOperator.EXISTENCE
         )
 
-        # Switch -> Inner door
         causal_graph.add_dependency(
             source_id="switch_09_inner",
             target_id="door_09_inner",

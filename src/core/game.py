@@ -131,6 +131,8 @@ class Game:
         """Initialize game objects."""
         # Player
         self.player = Player(position=(100, 100))
+        self.player.multiverse = self.multiverse
+        self.multiverse.player = self.player
 
         # Simple reward system
         self._reward_per_level: int = 10
@@ -602,28 +604,11 @@ class Game:
         # Render player
         self.renderer.render_player(self.player, self.camera)
         
-        # Render particles
-        self.particles.render(self.screen, self.camera.get_offset())
-        
         # Apply universe overlay
         if active_universe:
             self.renderer.apply_universe_overlay(active_universe.universe_type)
-        
-        # Render causal sight
-        if self.causal_sight.is_active():
-            self.causal_sight.render(self.screen)
-            self.causal_sight.render_legend(self.screen)
-        
-        # Composite renderer layers
-        self.renderer.composite()
-        
-        # Render UI
-        self.hud.render(self.screen)
-        
-        # Render tips
-        self.tip_manager.render(self.screen)
-        
-        # Debug info
+
+        # Debug info on renderer UI layer (must happen before composite)
         if self.renderer.debug_mode:
             self.renderer.draw_debug_info({
                 'FPS': int(self.clock.get_fps()),
@@ -632,6 +617,23 @@ class Game:
                 'Universe': self.multiverse.active_type.name if self.multiverse.active_type else 'None',
                 'Player': f'({int(self.player.x)}, {int(self.player.y)})'
             })
+        
+        # Composite renderer layers
+        self.renderer.composite()
+
+        # Render world-space effects after compositing so they are not overwritten
+        self.particles.render(self.screen, self.camera.get_offset())
+
+        # Render causal sight overlay on top of the world
+        if self.causal_sight.is_active():
+            self.causal_sight.render(self.screen)
+            self.causal_sight.render_legend(self.screen)
+        
+        # Render UI
+        self.hud.render(self.screen)
+        
+        # Render tips
+        self.tip_manager.render(self.screen)
     
     # ===== STATE TRANSITIONS =====
     
@@ -648,6 +650,7 @@ class Game:
         if self.current_level:
             # Load proximity tips for this level
             self._load_level_tips("level_01")
+            self.causal_sight.clear_entity_positions()
             # Set camera bounds
             self.camera.set_world_bounds(
                 self.current_level.width_pixels,
@@ -707,6 +710,7 @@ class Game:
             self.hud.set_keys(0, self.current_level.config.required_keys)
             self.hud.set_player_health(self.player.health, self.player.max_health)
             self.paradox_meter.set_level(0)
+            self.causal_sight.clear_entity_positions()
             
             # Reload tips
             self._load_level_tips(self.current_level.config.level_id)
@@ -729,6 +733,7 @@ class Game:
             self.camera.center_on(self.player.x, self.player.y)
             self.hud.set_keys(0, self.current_level.config.required_keys)
             self.paradox_meter.set_level(0)
+            self.causal_sight.clear_entity_positions()
             
             # Load tips for the new level
             self._load_level_tips(self.current_level.config.level_id)
@@ -747,6 +752,9 @@ class Game:
         if self.current_level:
             self.current_level.cleanup()
             self.current_level = None
+
+        self.causal_sight.deactivate()
+        self.causal_sight.clear_entity_positions()
         
         self.multiverse.reset()
         self.state_manager.change_state(GameState.MENU)
@@ -791,18 +799,38 @@ class Game:
     def _on_universe_switched(self, data: dict) -> None:
         """Handle universe switch."""
         u_type = data.get('type')
+
+        if isinstance(u_type, str):
+            try:
+                u_type = UniverseType(u_type)
+            except ValueError:
+                try:
+                    u_type = UniverseType[u_type]
+                except (KeyError, TypeError):
+                    u_type = None
+
+        if u_type is None:
+            to_value = data.get('to')
+            if isinstance(to_value, str):
+                try:
+                    u_type = UniverseType(to_value)
+                except ValueError:
+                    try:
+                        u_type = UniverseType[to_value]
+                    except (KeyError, TypeError):
+                        u_type = None
+
         if u_type:
             self.universe_indicator.set_universe(u_type)
-            
-            color = self._get_universe_color(u_type)
-            EventSystem.emit(GameEvent.UNIVERSE_SWITCHED, {
-                'universe': u_type.name,
-                'color': color
-            })
     
     def _on_paradox_changed(self, data: dict) -> None:
         """Handle paradox level change."""
-        level = data.get('level', 0)
+        level = data.get('level')
+        if level is None:
+            level = data.get('new_level')
+        if level is None:
+            level = self.multiverse.paradox_manager.level
+
         self.paradox_meter.set_level(level)
     
     def _on_level_complete(self, data: dict) -> None:
@@ -860,6 +888,7 @@ class Game:
         if self.current_level:
             self.current_level.cleanup()
         
+        self.causal_sight.clear_entity_positions()
         self.hud.cleanup()
         self.tip_manager.cleanup()
         EventSystem.clear()

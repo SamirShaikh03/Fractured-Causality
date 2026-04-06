@@ -1,27 +1,38 @@
-"""Shared sprite loading helpers with fallback support."""
-
 import os
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import pygame
 
 from ..core.settings import ASSETS_DIR
 
 
-def load_entity_sprite(filename: str, size: Tuple[int, int]) -> Optional[pygame.Surface]:
-    """Load and scale an entity sprite from assets/images/sprites.
+_sprite_cache: Dict[Tuple[str, Tuple[int, int]], Optional[pygame.Surface]] = {}
 
-    Returns None when the file does not exist or cannot be loaded.
-    """
+
+def load_entity_sprite(filename: str, size: Tuple[int, int]) -> Optional[pygame.Surface]:
+       
+    cache_key = (filename, size)
+    if cache_key in _sprite_cache:
+        return _sprite_cache[cache_key]
+
     sprite_dir = os.path.join(ASSETS_DIR, "images", "sprites")
     sprite_path = os.path.join(sprite_dir, filename)
 
     if not os.path.exists(sprite_path):
+        _sprite_cache[cache_key] = None
         return None
 
     try:
         sprite = pygame.image.load(sprite_path)
         sprite = sprite.convert_alpha()
-        return pygame.transform.scale(sprite, size)
+        scaled = pygame.transform.scale(sprite, size)
+        _sprite_cache[cache_key] = scaled
+        return scaled
     except (OSError, ValueError, RuntimeError, TypeError):
+        _sprite_cache[cache_key] = None
         return None
+
+
+def clear_sprite_cache() -> None:
+                                                                             
+    _sprite_cache.clear()

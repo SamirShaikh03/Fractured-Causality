@@ -1,8 +1,4 @@
-"""Global UI design tokens and helpers.
-
-Single source of truth for typography, spacing, container styling,
-and palette used across menu, HUD, and in-game overlays.
-"""
+   
 
 from dataclasses import dataclass
 from typing import Dict
@@ -56,7 +52,7 @@ UI_PALETTE = Palette()
 
 
 def get_ui_fonts(scale: float = 1.0) -> Dict[str, object]:
-    """Build a font set for the current UI scale."""
+                                                    
     safe_scale = max(0.75, min(2.0, scale))
     return {
         "title": get_ui_font(max(10, int(UI_TYPOGRAPHY.title * safe_scale))),

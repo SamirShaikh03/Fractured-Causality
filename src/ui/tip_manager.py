@@ -1,12 +1,4 @@
-"""
-Tip Manager - Contextual tip system for player guidance.
-
-Shows helpful tips based on:
-- Player proximity to objects/enemies
-- Game events (first time actions)
-- Level-specific tutorial triggers
-- Timed introductory tips
-"""
+   
 
 import pygame
 import math
@@ -19,7 +11,7 @@ from ..core.events import EventSystem, GameEvent
 from .design_system import UI_PALETTE
 
 
-# Tip styling colors
+                    
 TIP_BG = UI_PALETTE.panel_soft
 TIP_BORDER_INFO = UI_PALETTE.info
 TIP_BORDER_HINT = (255, 215, 0)
@@ -32,92 +24,83 @@ TIP_TEXT_DIM = UI_PALETTE.text_secondary
 
 @dataclass
 class Tip:
-    """A single tip/hint to display."""
+                                       
     tip_id: str
     title: str
     text: str
-    category: str = "info"        # info, hint, warning, story
-    duration: float = 5.0         # How long to show
-    priority: int = 0             # Higher = more important
-    show_once: bool = True        # Only show once per session
-    icon: str = "?"               # Icon character
+    category: str = "info"                                    
+    duration: float = 5.0                           
+    priority: int = 0                                      
+    show_once: bool = True                                    
+    icon: str = "?"                               
     fade_in: float = 0.3
     fade_out: float = 0.5
 
 
 @dataclass
 class ProximityTip:
-    """A tip triggered by player proximity to a position."""
+                                                            
     tip: Tip
-    position: Tuple[float, float]  # World position (pixels)
-    trigger_radius: float = 120.0  # Pixels
+    position: Tuple[float, float]                           
+    trigger_radius: float = 120.0          
     triggered: bool = False
 
 
 @dataclass
 class ActiveTip:
-    """A tip currently being displayed."""
+                                          
     tip: Tip
     start_time: float
     alpha: float = 0.0
-    phase: str = "fade_in"  # fade_in, visible, fade_out, done
+    phase: str = "fade_in"                                    
 
 
 class TipManager:
-    """
-    Manages contextual tips and player guidance.
-    
-    Features:
-    - Proximity-based tips (triggers near objects)
-    - Event-based tips (on first action)
-    - Queued tip display (one at a time, with priority)
-    - Beautiful cyberpunk-styled rendering
-    - Tracks which tips have been shown
-    """
+       
     
     def __init__(self):
-        """Initialize the TipManager."""
+                                        
         pygame.font.init()
         self._font_title = get_ui_font(18)
         self._font_body = get_ui_font(15)
         self._font_icon = get_ui_font(24)
         self._font_dismiss = get_ui_font(13)
         
-        # Active tip being displayed
+                                    
         self._active_tip: Optional[ActiveTip] = None
         
-        # Queue of pending tips
+                               
         self._tip_queue: List[Tip] = []
         
-        # Proximity tips for current level
+                                          
         self._proximity_tips: List[ProximityTip] = []
         
-        # Track shown tips (to avoid repeats)
+                                             
         self._shown_tips: Set[str] = set()
         
-        # Event-based tip mappings
+                                  
         self._event_tips: Dict[str, Tip] = {}
         
-        # Cooldown between tips
+                               
         self._tip_cooldown: float = 0.0
         self._min_tip_interval: float = 2.0
         
-        # Animation
+                   
         self._pulse_timer: float = 0.0
         self._slide_offset: float = 0.0
         
-        # Subscribe to events
+                             
         EventSystem.subscribe(GameEvent.LEVEL_STARTED, self._on_level_started)
         EventSystem.subscribe(GameEvent.UNIVERSE_SWITCHED, self._on_universe_switched)
         EventSystem.subscribe(GameEvent.ITEM_COLLECTED, self._on_item_collected)
         EventSystem.subscribe(GameEvent.ENEMY_DEFEATED, self._on_enemy_defeated)
         EventSystem.subscribe(GameEvent.PLAYER_DAMAGED, self._on_player_damaged)
         
-        # Register global one-time tips
+                                       
         self._register_global_tips()
     
     def _register_global_tips(self) -> None:
-        """Register tips for first-time game events."""
+                                                       
         self._event_tips["first_universe_switch"] = Tip(
             tip_id="first_universe_switch",
             title="UNIVERSE SHIFTED!",
@@ -159,49 +142,33 @@ class TipManager:
         )
     
     def queue_tip(self, tip: Tip) -> None:
-        """
-        Add a tip to the display queue.
-        
-        Args:
-            tip: The tip to queue
-        """
+           
         if tip.show_once and tip.tip_id in self._shown_tips:
             return
         
-        # Don't add duplicates to queue
+                                       
         for queued in self._tip_queue:
             if queued.tip_id == tip.tip_id:
                 return
         
-        # Don't re-queue the active tip
+                                       
         if self._active_tip and self._active_tip.tip.tip_id == tip.tip_id:
             return
         
         self._tip_queue.append(tip)
-        # Sort by priority (higher first)
+                                         
         self._tip_queue.sort(key=lambda t: t.priority, reverse=True)
     
     def add_proximity_tips(self, tips: List[ProximityTip]) -> None:
-        """
-        Set proximity-based tips for the current level.
-        
-        Args:
-            tips: List of proximity tips
-        """
+           
         self._proximity_tips = tips
     
     def clear_proximity_tips(self) -> None:
-        """Clear all proximity tips."""
+                                       
         self._proximity_tips.clear()
     
     def check_proximity(self, player_x: float, player_y: float) -> None:
-        """
-        Check if the player is near any proximity tip triggers.
-        
-        Args:
-            player_x: Player X position
-            player_y: Player Y position
-        """
+           
         for ptip in self._proximity_tips:
             if ptip.triggered:
                 continue
@@ -215,19 +182,14 @@ class TipManager:
                 self.queue_tip(ptip.tip)
     
     def update(self, dt: float) -> None:
-        """
-        Update the tip system.
-        
-        Args:
-            dt: Delta time
-        """
+           
         self._pulse_timer += dt
         
-        # Update cooldown
+                         
         if self._tip_cooldown > 0:
             self._tip_cooldown -= dt
         
-        # Update active tip
+                           
         if self._active_tip:
             tip = self._active_tip
             elapsed = time.time() - tip.start_time
@@ -257,7 +219,7 @@ class TipManager:
                     self._active_tip = None
                     self._tip_cooldown = self._min_tip_interval
         
-        # Show next tip from queue if no active tip
+                                                   
         if not self._active_tip and self._tip_cooldown <= 0 and self._tip_queue:
             next_tip = self._tip_queue.pop(0)
             if not (next_tip.show_once and next_tip.tip_id in self._shown_tips):
@@ -268,19 +230,14 @@ class TipManager:
                 self._shown_tips.add(next_tip.tip_id)
     
     def render(self, surface: pygame.Surface) -> None:
-        """
-        Render the active tip.
-        
-        Args:
-            surface: Target surface
-        """
+           
         if not self._active_tip or self._active_tip.alpha <= 0:
             return
         
         tip = self._active_tip.tip
         alpha = int(self._active_tip.alpha)
         
-        # Get border color based on category
+                                            
         if tip.category == "hint":
             border_color = TIP_BORDER_HINT
         elif tip.category == "warning":
@@ -290,51 +247,51 @@ class TipManager:
         else:
             border_color = TIP_BORDER_INFO
         
-        # Calculate dimensions
+                              
         padding = 16
         icon_size = 36
         max_text_width = 420
         
-        # Render text to get dimensions
+                                       
         title_surf = self._font_title.render(tip.title, True, border_color)
         
-        # Word-wrap body text
+                             
         body_lines = self._wrap_text(tip.text, self._font_body, max_text_width - icon_size - padding)
         body_surfs = [self._font_body.render(line, True, TIP_TEXT_MAIN) for line in body_lines]
         
-        # Dismiss hint
+                      
         dismiss_surf = self._font_dismiss.render("auto-dismiss", True, TIP_TEXT_DIM)
         
-        # Calculate total height
+                                
         body_height = sum(s.get_height() + 2 for s in body_surfs)
         total_height = padding * 2 + title_surf.get_height() + 8 + body_height + 4 + dismiss_surf.get_height()
         total_width = max_text_width + icon_size + padding * 3
         
-        # Position (top-center with slide offset)
+                                                 
         box_x = (SCREEN_WIDTH - total_width) // 2
         box_y = 70 + int(self._slide_offset)
         
-        # Create tip surface with alpha
+                                       
         tip_surface = pygame.Surface((total_width, total_height), pygame.SRCALPHA)
         
-        # Background
+                    
         bg_alpha = int(alpha * 0.85)
         pygame.draw.rect(tip_surface, (*TIP_BG, bg_alpha), 
                         (0, 0, total_width, total_height), border_radius=10)
         
-        # Glowing border
+                        
         border_alpha = min(255, int(alpha * 0.9))
         border_with_alpha = (*border_color, border_alpha)
         pygame.draw.rect(tip_surface, border_with_alpha, 
                         (0, 0, total_width, total_height), 2, border_radius=10)
         
-        # Neon glow effect on border (subtle)
+                                             
         pulse = 0.7 + 0.3 * math.sin(self._pulse_timer * 2)
         glow_alpha = int(border_alpha * 0.3 * pulse)
         pygame.draw.rect(tip_surface, (*border_color, glow_alpha), 
                         (-2, -2, total_width + 4, total_height + 4), 4, border_radius=12)
         
-        # Icon circle
+                     
         icon_cx = padding + icon_size // 2
         icon_cy = padding + icon_size // 2
         pygame.draw.circle(tip_surface, (*border_color, int(alpha * 0.3)), 
@@ -342,32 +299,32 @@ class TipManager:
         pygame.draw.circle(tip_surface, border_with_alpha, 
                           (icon_cx, icon_cy), icon_size // 2, 2)
         
-        # Icon text
+                   
         icon_surf = self._font_icon.render(tip.icon, True, (*border_color,))
         icon_surf.set_alpha(alpha)
         icon_rect = icon_surf.get_rect(center=(icon_cx, icon_cy))
         tip_surface.blit(icon_surf, icon_rect)
         
-        # Title
+               
         title_x = padding + icon_size + padding
         title_y = padding
         title_surf.set_alpha(alpha)
         tip_surface.blit(title_surf, (title_x, title_y))
         
-        # Accent line under title
+                                 
         line_y = title_y + title_surf.get_height() + 3
         pygame.draw.line(tip_surface, (*border_color, int(alpha * 0.5)), 
                         (title_x, line_y), 
                         (title_x + title_surf.get_width(), line_y), 1)
         
-        # Body text
+                   
         body_y = line_y + 6
         for body_surf in body_surfs:
             body_surf.set_alpha(alpha)
             tip_surface.blit(body_surf, (title_x, body_y))
             body_y += body_surf.get_height() + 2
         
-        # Dismiss hint
+                      
         dismiss_surf.set_alpha(int(alpha * 0.5))
         tip_surface.blit(dismiss_surf, 
                         (total_width - dismiss_surf.get_width() - padding, 
@@ -376,17 +333,7 @@ class TipManager:
         surface.blit(tip_surface, (box_x, box_y))
 
     def _wrap_text(self, text: str, font: pygame.font.Font, max_width: int) -> List[str]:
-        """
-        Word-wrap text to fit within max_width.
-        
-        Args:
-            text: Text to wrap
-            font: Font to measure with
-            max_width: Maximum width in pixels
-            
-        Returns:
-            List of wrapped lines
-        """
+           
         words = text.split()
         lines = []
         current_line = ""
@@ -405,14 +352,14 @@ class TipManager:
         
         return lines if lines else [""]
     
-    # ===== EVENT HANDLERS =====
+                                
     
     def _on_level_started(self, data: dict) -> None:
-        """Show level intro tips."""
+                                    
         level_id = data.get("level_id", "")
         level_name = data.get("level_name", "")
         
-        # Show level welcome tip
+                                
         self.queue_tip(Tip(
             tip_id=f"level_intro_{level_id}",
             title=f"~ {level_name.upper()} ~",
@@ -424,7 +371,7 @@ class TipManager:
             show_once=True
         ))
         
-        # Show controls reminder tip after intro
+                                                
         self.queue_tip(Tip(
             tip_id=f"controls_reminder_{level_id}",
             title="CONTROLS",
@@ -437,32 +384,32 @@ class TipManager:
         ))
     
     def _on_universe_switched(self, data: dict) -> None:
-        """Tip on first universe switch."""
+                                           
         tip = self._event_tips.get("first_universe_switch")
         if tip:
             self.queue_tip(tip)
     
     def _on_item_collected(self, data: dict) -> None:
-        """Tip on first key collected."""
+                                         
         if data.get("item_type") == "key":
             tip = self._event_tips.get("first_key_collected")
             if tip:
                 self.queue_tip(tip)
     
     def _on_enemy_defeated(self, data: dict) -> None:
-        """Tip on first enemy defeated."""
+                                          
         tip = self._event_tips.get("first_enemy_defeated")
         if tip:
             self.queue_tip(tip)
     
     def _on_player_damaged(self, data: dict) -> None:
-        """Tip on first damage taken."""
+                                        
         tip = self._event_tips.get("first_damage_taken")
         if tip:
             self.queue_tip(tip)
     
     def _get_level_intro_text(self, level_id: str) -> str:
-        """Get intro text for a level."""
+                                         
         intros = {
             "level_01": "Reality has fractured. Use [SPACE] to switch between parallel universes. "
                        "Paths blocked in one universe may be open in another. Find the key and reach the portal!",
@@ -475,15 +422,7 @@ class TipManager:
         return intros.get(level_id, "Explore, switch universes, and find the way forward.")
     
     def get_level_proximity_tips(self, level_id: str) -> List[ProximityTip]:
-        """
-        Get proximity-based tips for a specific level.
-        
-        Args:
-            level_id: The level identifier
-            
-        Returns:
-            List of proximity tips for the level
-        """
+           
         tips = {
             "level_01": [
                 ProximityTip(
@@ -689,14 +628,14 @@ class TipManager:
         return tips.get(level_id, [])
     
     def reset_for_level(self) -> None:
-        """Reset state for a new level."""
+                                          
         self._proximity_tips.clear()
         self._tip_queue.clear()
         self._active_tip = None
-        self._tip_cooldown = 1.0  # Small initial delay
+        self._tip_cooldown = 1.0                       
     
     def cleanup(self) -> None:
-        """Clean up event subscriptions."""
+                                           
         EventSystem.unsubscribe(GameEvent.LEVEL_STARTED, self._on_level_started)
         EventSystem.unsubscribe(GameEvent.UNIVERSE_SWITCHED, self._on_universe_switched)
         EventSystem.unsubscribe(GameEvent.ITEM_COLLECTED, self._on_item_collected)

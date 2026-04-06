@@ -1,11 +1,3 @@
-"""
-Paradox Wraith - An entity that only exists when paradox is high.
-
-The Paradox Wraith is attracted to causal instability. It hunts
-the player when paradox levels are elevated, but disappears when
-reality stabilizes.
-"""
-
 import pygame
 from typing import Tuple, Optional
 import math
@@ -19,51 +11,41 @@ from ...utils.sprite_loader import load_entity_sprite
 
 
 class ParadoxWraith(Entity):
-    """Enemy manifested by high paradox. Hunts player and phases through walls."""
-    
     def __init__(self, position: Tuple[float, float],
                  paradox_threshold: float = 50.0):
-        """Initialize a Paradox Wraith."""
         scaled_size = max(1, int(round(TILE_SIZE * 1.3225)))
         config = EntityConfig(
             position=position,
             size=(scaled_size, scaled_size),
             color=(255, 50, 50),
             persistence=EntityPersistence.EXCLUSIVE,
-            solid=False,  # Passes through walls
+            solid=False,
             interactive=False
         )
         super().__init__(config)
         
-        # Paradox binding
         self.paradox_threshold: float = paradox_threshold
         self.current_paradox: float = 0.0
         self.is_manifested: bool = False
         
-        # Mark as enemy for combat system
         self.is_enemy = True
         self.health: int = 75
         self.max_health: int = 75
-        self.damage: int = 20  # Damage dealt to player on contact
-        
-        # Hunting behavior
+        self.damage: int = 20 
+
         self.hunt_speed: float = 80.0
         self.detection_range: float = 300.0
         self._player_position: Optional[Tuple[float, float]] = None
-        
-        # Visual state
+
         self._phase: float = 0.0
         self._flicker_intensity: float = 0.0
         self._manifest_progress: float = 0.0
-        
-        # Spawn protection (can't touch player immediately)
+
         self._spawn_immunity: float = 0.0
-        
-        # Create sprite
+
         self._create_sprite()
     
     def _create_sprite(self) -> None:
-        """Create the Wraith's terrifying appearance."""
         loaded = load_entity_sprite("enemy_paradox_wraith.png", self.size)
         if loaded is not None:
             self.sprite = loaded
@@ -73,8 +55,7 @@ class ParadoxWraith(Entity):
         
         w, h = self.size
         center = (w // 2, h // 2)
-        
-        # Distorted, flame-like body
+
         for i in range(5):
             points = []
             num_points = 8
@@ -90,28 +71,18 @@ class ParadoxWraith(Entity):
             if len(points) >= 3:
                 pygame.draw.polygon(self.sprite, color, points)
         
-        # Void eye
         pygame.draw.circle(self.sprite, (0, 0, 0), center, w // 5)
         pygame.draw.circle(self.sprite, (255, 100, 100), center, w // 8)
     
     def set_paradox_level(self, level: float) -> None:
-        """
-        Update the current paradox level.
-        
-        Called by the game when paradox changes.
-        
-        Args:
-            level: Current paradox level (0-100)
-        """
         self.current_paradox = level
         
         was_manifested = self.is_manifested
         self.is_manifested = level >= self.paradox_threshold
         
         if self.is_manifested and not was_manifested:
-            # Just manifested
             self._manifest_progress = 0.0
-            self._spawn_immunity = 1.0  # 1 second immunity
+            self._spawn_immunity = 1.0
             self.exists = True
             self.visible = True
             
@@ -122,8 +93,7 @@ class ParadoxWraith(Entity):
             })
         
         elif not self.is_manifested and was_manifested:
-            # Just de-manifested
-            self._manifest_progress = 1.0  # Will fade out
+            self._manifest_progress = 1.0 
             
             EventSystem.emit(GameEvent.ENTITY_DESTROYED, {
                 "entity_id": self.entity_id,
@@ -132,18 +102,14 @@ class ParadoxWraith(Entity):
             })
     
     def set_player_position(self, pos: Tuple[float, float]) -> None:
-        """Set the player's position for hunting."""
         self._player_position = pos
     
     def update(self, dt: float) -> None:
-        """Update the Paradox Wraith."""
         self._phase += dt * 3
         
-        # Update spawn immunity
         if self._spawn_immunity > 0:
             self._spawn_immunity = max(0, self._spawn_immunity - dt)
         
-        # Manifestation animation
         if self.is_manifested and self._manifest_progress < 1.0:
             self._manifest_progress = min(1.0, self._manifest_progress + dt * 2)
             self.visible = True
@@ -157,17 +123,13 @@ class ParadoxWraith(Entity):
         if not self.is_manifested or not self.exists:
             return
         
-        # Hunt player
         if self._player_position:
             self._hunt_player(dt)
-        
-        # Random flicker
         self._flicker_intensity = 0.5 + 0.5 * math.sin(self._phase * 5)
         
         super().update(dt)
     
     def _hunt_player(self, dt: float) -> None:
-        """Move toward the player."""
         if not self._player_position:
             return
         
@@ -177,15 +139,11 @@ class ParadoxWraith(Entity):
         distance = math.sqrt(dx * dx + dy * dy)
         
         if distance > self.detection_range:
-            return  # Too far, wander instead
+            return 
         
         if distance < 5:
-            return  # On top of palyer
-        
-        # Move toward player with erratic motion
+            return
         speed = self.hunt_speed * dt
-        
-        # Add some erratic movement (paradox creatures are unstable)
         erratic_x = math.sin(self._phase * 7) * 20 * dt
         erratic_y = math.cos(self._phase * 7) * 20 * dt
         
@@ -195,15 +153,6 @@ class ParadoxWraith(Entity):
         )
     
     def check_player_collision(self, player_rect: pygame.Rect) -> bool:
-        """
-        Check if wraith is touching the player.
-        
-        Args:
-            player_rect: Player's bounding rectangle
-            
-        Returns:
-            True if collision (and should eject player)
-        """
         if not self.exists or not self.is_manifested:
             return False
         
@@ -211,22 +160,12 @@ class ParadoxWraith(Entity):
             return False
         
         if self._manifest_progress < 0.8:
-            return False  # Not fully manifested
+            return False
         
         return self.get_rect().colliderect(player_rect)
     
     def take_damage(self, amount: int) -> bool:
-        """
-        Take damage from an attack.
-        
-        Args:
-            amount: Amount of damage to take
-            
-        Returns:
-            True if the enemy was defeated
-        """
         self.health -= amount
-        # Wraith flickers violently when hit
         self._flicker_intensity = 1.0
         if self.health <= 0:
             self.health = 0
@@ -240,7 +179,6 @@ class ParadoxWraith(Entity):
     
     def render(self, surface: pygame.Surface,
                camera_offset: Tuple[int, int] = (0, 0)) -> None:
-        """Render the Paradox Wraith with distortion effects."""
         if not self.visible:
             return
         
@@ -248,9 +186,7 @@ class ParadoxWraith(Entity):
         render_x = int(self.x - ox)
         render_y = int(self.y - oy)
         
-        # Manifestation effect
         if self._manifest_progress < 1.0:
-            # Particles coalescing
             for i in range(8):
                 angle = (2 * math.pi * i) / 8 + self._phase
                 dist = (1 - self._manifest_progress) * 50
@@ -261,8 +197,7 @@ class ParadoxWraith(Entity):
                 alpha = int(self._manifest_progress * 200)
                 pygame.draw.circle(particle_surface, (255, 50, 50, alpha), (4, 4), 4)
                 surface.blit(particle_surface, (int(px) - 4, int(py) - 4))
-        
-        # Distortion aura
+
         aura_radius = int(self.width // 2 + math.sin(self._phase) * 10)
         aura_alpha = int(80 * self._flicker_intensity * self._manifest_progress)
         
@@ -279,18 +214,15 @@ class ParadoxWraith(Entity):
                     (render_x + self.width // 2 - aura_radius - 10,
                      render_y + self.height // 2 - aura_radius - 10))
         
-        # Main sprite with flicker
         if self._manifest_progress > 0.3:
             temp_sprite = self.sprite.copy()
             temp_sprite.set_alpha(int(255 * self._manifest_progress * self._flicker_intensity))
             
-            # Slight position jitter
             jitter_x = int(math.sin(self._phase * 10) * 2)
             jitter_y = int(math.cos(self._phase * 10) * 2)
             surface.blit(temp_sprite, (render_x + jitter_x, render_y + jitter_y))
     
     def serialize(self) -> dict:
-        """Serialize state."""
         data = super().serialize()
         data.update({
             "paradox_threshold": self.paradox_threshold,
@@ -300,7 +232,6 @@ class ParadoxWraith(Entity):
     
     @classmethod
     def deserialize(cls, data: dict) -> 'ParadoxWraith':
-        """Deserialize from save data."""
         wraith = cls(
             position=tuple(data["position"]),
             paradox_threshold=data.get("paradox_threshold", 50.0)

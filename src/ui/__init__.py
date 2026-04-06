@@ -1,6 +1,4 @@
-"""
-UI Components - Module for user interface elements.
-"""
+   
 
 from .hud import HUD
 from .menu import Menu, MenuState

@@ -1,9 +1,4 @@
-"""
-Menu System - Game menus and UI navigation.
-
-Handles main menu, pause menu, and level select.
-Features clean design with proper spacing and layout.
-"""
+   
 
 import pygame
 from typing import List, Callable, Optional, Tuple
@@ -14,9 +9,9 @@ from ..core.settings import SCREEN_WIDTH, SCREEN_HEIGHT, get_ui_font
 from .design_system import UI_PALETTE
 
 
-# =============================================================================
-# BASIC THEME COLORS
-# =============================================================================
+                                                                               
+                    
+                                                                               
 THEME_BG_DARK = UI_PALETTE.bg
 THEME_BG_MEDIUM = UI_PALETTE.panel
 THEME_BG_PANEL = UI_PALETTE.panel_soft
@@ -30,7 +25,7 @@ THEME_TEXT_DISABLED = (95, 100, 110)
 
 
 class MenuState(Enum):
-    """Menu states."""
+                      
     MAIN = auto()
     HOW_TO_PLAY = auto()
     PAUSE = auto()
@@ -43,7 +38,7 @@ class MenuState(Enum):
 
 @dataclass
 class MenuItem:
-    """A menu item with click support."""
+                                         
     label: str
     action: Callable[[], None]
     enabled: bool = True
@@ -53,21 +48,13 @@ class MenuItem:
 
 
 class Menu:
-    """
-    Menu system for the game.
-    
-    Features:
-    - Clean, readable design
-    - Smooth transitions
-    - Proper spacing and layout
-    - Mouse and keyboard support
-    """
+       
     
     def __init__(self):
-        """Initialize the menu system."""
+                                         
         pygame.font.init()
         
-        # Fonts
+               
         self._font_title = get_ui_font(74)
         self._font_title_compact = get_ui_font(58)
         self._font_subtitle = get_ui_font(32)
@@ -78,26 +65,26 @@ class Menu:
         self._font_tiny = get_ui_font(20)
         self._font_micro = get_ui_font(14)
 
-        #How to Play typography hierarchy
+                                         
         self._font_howto_title = get_ui_font(52)
         self._font_howto_section = get_ui_font(26)
         self._font_howto_label = get_ui_font(18)
         self._font_howto_body = get_ui_font(15)
 
         
-        # State
+               
         self._state: MenuState = MenuState.MAIN
         self._items: List[MenuItem] = []
         self._selected_index: int = 0
         self._is_visible: bool = True
         
-        # Simple timer for minor UI updates
+                                           
         self._time: float = 0.0
         
-        # Mouse tracking
+                        
         self._mouse_pos: Tuple[int, int] = (0, 0)
         
-        # Callbacks
+                   
         self._on_play: Optional[Callable] = None
         self._on_quit: Optional[Callable] = None
         self._on_resume: Optional[Callable] = None
@@ -105,11 +92,11 @@ class Menu:
         self._on_next_level: Optional[Callable] = None
         self._on_main_menu: Optional[Callable] = None
         
-        # Initialize main menu
+                              
         self._setup_main_menu()
     
     def _setup_main_menu(self) -> None:
-        """Set up main menu items - simple and clear."""
+                                                        
         self._items = [
             MenuItem("START GAME", self._on_play_clicked),
             MenuItem("HOW TO PLAY", self._on_how_to_play_clicked),
@@ -119,7 +106,7 @@ class Menu:
         self._update_selection()
     
     def _setup_how_to_play(self) -> None:
-        """Set up how to play screen."""
+                                        
         self._items = [
             MenuItem("BACK TO MENU", lambda: self.set_state(MenuState.MAIN)),
         ]
@@ -127,7 +114,7 @@ class Menu:
         self._update_selection()
     
     def _setup_pause_menu(self) -> None:
-        """Set up pause menu items."""
+                                      
         self._items = [
             MenuItem("RESUME", self._on_resume_clicked),
             MenuItem("RESTART LEVEL", self._on_restart_clicked),
@@ -137,7 +124,7 @@ class Menu:
         self._update_selection()
     
     def _setup_game_over(self) -> None:
-        """Set up game over menu."""
+                                    
         self._items = [
             MenuItem("TRY AGAIN", self._on_restart_clicked),
             MenuItem("MAIN MENU", self._on_main_menu_clicked),
@@ -146,7 +133,7 @@ class Menu:
         self._update_selection()
     
     def _setup_level_complete(self) -> None:
-        """Set up level complete menu."""
+                                         
         self._items = [
             MenuItem("NEXT LEVEL", self._on_next_level_clicked),
             MenuItem("REPLAY", self._on_restart_clicked),
@@ -156,12 +143,12 @@ class Menu:
         self._update_selection()
     
     def _update_selection(self) -> None:
-        """Update item selection states."""
+                                           
         for i, item in enumerate(self._items):
             item.selected = (i == self._selected_index)
     
     def set_state(self, state: MenuState) -> None:
-        """Change menu state."""
+                                
         self._state = state
         
         if state == MenuState.MAIN:
@@ -176,15 +163,15 @@ class Menu:
             self._setup_level_complete()
     
     def show(self) -> None:
-        """Show the menu."""
+                            
         self._is_visible = True
     
     def hide(self) -> None:
-        """Hide the menu."""
+                            
         self._is_visible = False
     
     def navigate_up(self) -> None:
-        """Navigate up in the menu."""
+                                      
         if not self._items:
             return
         
@@ -192,7 +179,7 @@ class Menu:
         if self._selected_index < 0:
             self._selected_index = len(self._items) - 1
         
-        # Skip disabled items
+                             
         attempts = 0
         while not self._items[self._selected_index].enabled and attempts < len(self._items):
             self._selected_index -= 1
@@ -203,7 +190,7 @@ class Menu:
         self._update_selection()
     
     def navigate_down(self) -> None:
-        """Navigate down in the menu."""
+                                        
         if not self._items:
             return
         
@@ -211,7 +198,7 @@ class Menu:
         if self._selected_index >= len(self._items):
             self._selected_index = 0
         
-        # Skip disabled items
+                             
         attempts = 0
         while not self._items[self._selected_index].enabled and attempts < len(self._items):
             self._selected_index += 1
@@ -222,7 +209,7 @@ class Menu:
         self._update_selection()
     
     def select(self) -> None:
-        """Select the current menu item."""
+                                           
         if not self._items:
             return
         
@@ -231,17 +218,17 @@ class Menu:
             item.action()
     
     def handle_input(self, event: pygame.event.Event) -> bool:
-        """Handle input events including mouse."""
+                                                  
         if not self._is_visible:
             return False
         
-        # Mouse motion - update hover states
+                                            
         if event.type == pygame.MOUSEMOTION:
             self._mouse_pos = event.pos
             self._update_hover_states()
             return True
         
-        # Mouse click - select item
+                                   
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             for i, item in enumerate(self._items):
                 if item.rect and item.rect.collidepoint(event.pos) and item.enabled:
@@ -250,7 +237,7 @@ class Menu:
                     item.action()
                     return True
         
-        # Keyboard input
+                        
         if event.type == pygame.KEYDOWN:
             if event.key in [pygame.K_UP, pygame.K_w]:
                 self.navigate_up()
@@ -272,7 +259,7 @@ class Menu:
         return False
     
     def _update_hover_states(self) -> None:
-        """Update item hover states based on mouse position."""
+                                                               
         for i, item in enumerate(self._items):
             if item.rect and item.rect.collidepoint(self._mouse_pos):
                 item.hover = True
@@ -283,31 +270,31 @@ class Menu:
                 item.hover = False
     
     def update(self, dt: float) -> None:
-        """Update menu timer."""
+                                
         self._time += dt
     
     def render(self, surface: pygame.Surface) -> None:
-        """Render the menu with clean design."""
+                                                
         if not self._is_visible:
             return
         
-        # Dark background
+                         
         self._draw_background(surface)
         
-        # Simple borders
+                        
         self._draw_borders(surface)
         
-        # State-specific rendering
+                                  
         if self._state == MenuState.HOW_TO_PLAY:
             self._draw_how_to_play(surface)
         else:
             self._draw_standard_menu(surface)
         
-        # Controls hint at bottom
+                                 
         self._draw_controls_hint(surface)
     
     def _draw_background(self, surface: pygame.Surface) -> None:
-        """Draw a plain background panel."""
+                                            
         surface.fill(THEME_BG_DARK)
 
         panel = pygame.Rect(24, 24, SCREEN_WIDTH - 48, SCREEN_HEIGHT - 48)
@@ -315,20 +302,20 @@ class Menu:
         pygame.draw.rect(surface, THEME_BG_MEDIUM, panel, 2)
     
     def _draw_borders(self, surface: pygame.Surface) -> None:
-        """Draw simple horizontal separators."""
+                                                
         pygame.draw.line(surface, THEME_BG_MEDIUM, (40, 110), (SCREEN_WIDTH - 40, 110), 1)
         pygame.draw.line(surface, THEME_BG_MEDIUM, (40, SCREEN_HEIGHT - 70), (SCREEN_WIDTH - 40, SCREEN_HEIGHT - 70), 1)
     
     def _draw_standard_menu(self, surface: pygame.Surface) -> None:
-        """Draw standard menu with title and buttons."""
-        # Title section (top third)
+                                                        
+                                   
         self._draw_title(surface)
         
-        # Menu buttons (center)
+                               
         self._draw_menu_items(surface)
     
     def _draw_title(self, surface: pygame.Surface) -> None:
-        """Draw title and subtitle."""
+                                      
         title_text = self._get_title()
         subtitle_text = self._get_subtitle()
 
@@ -357,7 +344,7 @@ class Menu:
             2,
         )
         
-        # Subtitle
+                  
         if subtitle_text:
             subtitle = subtitle_font.render(subtitle_text, True, THEME_TEXT_DIM)
             subtitle_x = (SCREEN_WIDTH - subtitle.get_width()) // 2
@@ -365,7 +352,7 @@ class Menu:
             surface.blit(subtitle, (subtitle_x, subtitle_y))
     
     def _draw_menu_items(self, surface: pygame.Surface) -> None:
-        """Draw simple menu buttons."""
+                                       
         if self._state == MenuState.MAIN:
             btn_width = 440
             btn_height = 62
@@ -405,16 +392,16 @@ class Menu:
             surface.blit(text, (text_x, text_y))
     
     def _draw_controls_hint(self, surface: pygame.Surface) -> None:
-        """Draw control hints at bottom."""
+                                           
         hint = "Arrow keys or mouse to move, Enter/click to select, Esc to go back"
         text = self._font_micro.render(hint, True, THEME_TEXT_DIM)
         x = (SCREEN_WIDTH - text.get_width()) // 2
         y = SCREEN_HEIGHT - 46
         surface.blit(text, (x, y))
     
-    # =========================================================================
-    # HOW TO PLAY SCREEN
-    # =========================================================================
+                                                                               
+                        
+                                                                               
     
     def _draw_how_to_play(self, surface: pygame.Surface) -> None:
         outer_margin = 32
@@ -587,7 +574,7 @@ class Menu:
         return lines
 
     def _get_title(self) -> str:
-        """Get title based on state."""
+                                       
         if self._state == MenuState.MAIN:
             return "FRACTURED"
         elif self._state == MenuState.PAUSE:
@@ -602,7 +589,7 @@ class Menu:
             return ""
     
     def _get_subtitle(self) -> str:
-        """Get subtitle based on state."""
+                                          
         if self._state == MenuState.MAIN:
             return "A simple multiverse puzzle game"
         elif self._state == MenuState.GAME_OVER:
@@ -611,7 +598,7 @@ class Menu:
             return "Balance restored. Next dimension awaits."
         return ""
     
-    # Callbacks
+               
     def set_callbacks(self, 
                      on_play: Callable = None,
                      on_quit: Callable = None,
@@ -619,7 +606,7 @@ class Menu:
                      on_restart: Callable = None,
                      on_next_level: Callable = None,
                      on_main_menu: Callable = None) -> None:
-        """Set menu callbacks."""
+                                 
         self._on_play = on_play
         self._on_quit = on_quit
         self._on_resume = on_resume
@@ -632,7 +619,7 @@ class Menu:
             self._on_play()
     
     def _on_how_to_play_clicked(self) -> None:
-        """Show how to play screen."""
+                                      
         self.set_state(MenuState.HOW_TO_PLAY)
     
     def _on_quit_clicked(self) -> None:

@@ -8,7 +8,7 @@ Changing values here affects the entire game.
 import pygame
 import os
 import sys
-from typing import Optional
+from typing import Dict, Optional, Tuple
 
 # =============================================================================
 # DISPLAY SETTINGS
@@ -138,11 +138,22 @@ FONT_FAMILY = "Press Start 2P"
 FONT_FILE_NAME = "PressStart2P-Regular.ttf"
 FONT_PATH = None
 
+_FONT_PATH_STATE: Dict[str, object] = {
+    "resolved": False,
+    "value": None,
+}
+_UI_FONT_CACHE: Dict[Tuple[str, int], pygame.font.Font] = {}
+
 
 def _resolve_ui_font_path() -> Optional[str]:
     """Resolve a usable Press Start 2P font path from common locations."""
+    if bool(_FONT_PATH_STATE["resolved"]):
+        return _FONT_PATH_STATE["value"]  # type: ignore[return-value]
+
+    resolved_path: Optional[str] = None
+
     if FONT_PATH and os.path.exists(FONT_PATH):
-        return FONT_PATH
+        resolved_path = FONT_PATH
 
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     fonts_dir = os.path.join(base_dir, "assets", "fonts")
@@ -152,36 +163,70 @@ def _resolve_ui_font_path() -> Optional[str]:
         "Press Start 2P.ttf",
     )
 
-    for name in candidate_names:
-        candidate = os.path.join(fonts_dir, name)
-        if os.path.exists(candidate):
-            return candidate
+    if resolved_path is None:
+        for name in candidate_names:
+            candidate = os.path.join(fonts_dir, name)
+            if os.path.exists(candidate):
+                resolved_path = candidate
+                break
 
     # Support frozen builds (PyInstaller-style) where assets are unpacked.
     meipass_dir = getattr(sys, "_MEIPASS", None)
-    if meipass_dir:
+    if resolved_path is None and meipass_dir:
         frozen_fonts_dir = os.path.join(meipass_dir, "assets", "fonts")
         for name in candidate_names:
             candidate = os.path.join(frozen_fonts_dir, name)
             if os.path.exists(candidate):
-                return candidate
+                resolved_path = candidate
+                break
 
-    matched_system_font = pygame.font.match_font(FONT_FAMILY)
-    if matched_system_font and os.path.exists(matched_system_font):
-        return matched_system_font
+    if resolved_path is None:
+        matched_system_font = pygame.font.match_font(FONT_FAMILY)
+        if matched_system_font and os.path.exists(matched_system_font):
+            resolved_path = matched_system_font
 
-    return None
+    _FONT_PATH_STATE["value"] = resolved_path
+    _FONT_PATH_STATE["resolved"] = True
+    return resolved_path
 
 def get_ui_font(size=UI_FONT_SIZE):
     """Get a UI font. Uses Press Start 2P when available, then falls back."""
     font_path = _resolve_ui_font_path()
 
-    try:
-        return pygame.font.Font(font_path, size)
-    except (TypeError, FileNotFoundError, OSError, RuntimeError, ValueError):
+    if font_path:
+        cache_key = (font_path, size)
+        cached_font = _UI_FONT_CACHE.get(cache_key)
+        if cached_font:
+            return cached_font
+
         try:
-            return pygame.font.SysFont(FONT_FAMILY, size)
+            loaded_font = pygame.font.Font(font_path, size)
+            _UI_FONT_CACHE[cache_key] = loaded_font
+            return loaded_font
+        except (TypeError, FileNotFoundError, OSError, RuntimeError, ValueError):
+            pass
+
+    sysfont_key = (f"sys:{FONT_FAMILY}", size)
+    cached_sysfont = _UI_FONT_CACHE.get(sysfont_key)
+    if cached_sysfont:
+        return cached_sysfont
+
+    try:
+        sys_font = pygame.font.SysFont(FONT_FAMILY, size)
+        _UI_FONT_CACHE[sysfont_key] = sys_font
+        return sys_font
+    except (TypeError, OSError, RuntimeError, ValueError):
+        default_key = ("default", size)
+        cached_default = _UI_FONT_CACHE.get(default_key)
+        if cached_default:
+            return cached_default
+
+        try:
+            default_font = pygame.font.Font(None, size)
+            _UI_FONT_CACHE[default_key] = default_font
+            return default_font
         except (TypeError, OSError, RuntimeError, ValueError):
+            # Final fallback: bubble up default behavior if environment is broken.
             return pygame.font.Font(None, size)
 
 HUD_HEIGHT = 60
