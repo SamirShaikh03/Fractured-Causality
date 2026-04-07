@@ -7,7 +7,7 @@ This is the heart of Multiverse Causality.
 import pygame
 import sys
 import asyncio
-from typing import Optional
+from typing import Optional, Dict, Tuple
 
 from .settings import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, GAME_TITLE,
@@ -279,9 +279,14 @@ class Game:
         
         # Update player
         self.player.update(self.dt)
+
+        enemy_previous_positions = self._capture_enemy_positions()
         
         # Update multiverse
         self.multiverse.update(self.dt)
+
+        # Stop enemies at player contact so they don't drag the player by overlap resolution.
+        self._resolve_enemy_player_overlap(enemy_previous_positions)
 
         # Feed player position to enemies that track or hunt the player.
         if self.current_level:
@@ -298,7 +303,6 @@ class Game:
         if self.current_level:
             self.current_level.update(self.dt)
         
-        # Update physics
         active_universe = self.multiverse.active_universe
         if active_universe:
             entities = self.current_level.get_entities() if self.current_level else []
@@ -314,10 +318,8 @@ class Game:
                 self.dt
             )
             
-            # Check entity collisions
             self._check_entity_interactions()
         
-        # Update camera
         self.camera.follow(self.player)
         self.camera.update(self.dt)
         
@@ -444,6 +446,75 @@ class Game:
                 "type": "info",
                 "duration": 1.5
             })
+
+    def _capture_enemy_positions(self) -> Dict[str, Tuple[float, float]]:
+        """Capture active enemy positions before universe/entity updates."""
+        if not self.current_level:
+            return {}
+
+        positions: Dict[str, Tuple[float, float]] = {}
+        for entity in self.current_level.get_entities():
+            if entity.exists and entity.is_enemy:
+                positions[entity.entity_id] = (entity.x, entity.y)
+        return positions
+
+    def _resolve_enemy_player_overlap(self, previous_positions: Dict[str, Tuple[float, float]]) -> None:
+        """Rewind enemies that moved into the player this frame to avoid enemy-driven sliding."""
+        if not self.current_level or not previous_positions:
+            return
+
+        player_rect = self.player.get_rect()
+
+        for entity in self.current_level.get_entities():
+            if not entity.exists or not entity.is_enemy or not entity.solid:
+                continue
+
+            previous_pos = previous_positions.get(entity.entity_id)
+            if previous_pos is None:
+                continue
+
+            current_rect = entity.get_rect()
+            if not player_rect.colliderect(current_rect):
+                continue
+
+            if (entity.x, entity.y) == previous_pos:
+                continue
+
+            prev_x, prev_y = previous_pos
+            previous_rect = pygame.Rect(int(prev_x), int(prev_y), entity.width, entity.height)
+            if not player_rect.colliderect(previous_rect):
+                entity.set_position(prev_x, prev_y)
+
+    def _rects_touch_or_overlap(self, rect_a: pygame.Rect, rect_b: pygame.Rect,
+                                tolerance: int = 1) -> bool:
+        """Return True for overlap or side-contact with a small pixel tolerance."""
+        if rect_a.colliderect(rect_b):
+            return True
+
+        vertical_overlap = rect_a.bottom > rect_b.top and rect_a.top < rect_b.bottom
+        horizontal_overlap = rect_a.right > rect_b.left and rect_a.left < rect_b.right
+
+        touching_horizontally = (
+            abs(rect_a.right - rect_b.left) <= tolerance
+            or abs(rect_a.left - rect_b.right) <= tolerance
+        )
+        touching_vertically = (
+            abs(rect_a.bottom - rect_b.top) <= tolerance
+            or abs(rect_a.top - rect_b.bottom) <= tolerance
+        )
+
+        return (
+            (vertical_overlap and touching_horizontally)
+            or (horizontal_overlap and touching_vertically)
+        )
+
+    def _is_enemy_contact(self, enemy, player_rect: pygame.Rect,
+                          enemy_rect: pygame.Rect) -> bool:
+        """Check whether an enemy can currently damage the player."""
+        if hasattr(enemy, 'check_player_collision'):
+            return enemy.check_player_collision(player_rect)
+
+        return self._rects_touch_or_overlap(player_rect, enemy_rect)
     
     def _check_entity_interactions(self) -> None:
         """Check for automatic entity interactions."""
@@ -463,8 +534,10 @@ class Game:
                 entity.x, entity.y,
                 entity.width, entity.height
             )
-            
-            if player_rect.colliderect(entity_rect):
+
+            player_overlaps = player_rect.colliderect(entity_rect)
+
+            if player_overlaps:
                 # Auto-collect items
                 if hasattr(entity, 'collect'):
                     entity.collect(self.player)
@@ -472,26 +545,29 @@ class Game:
                 # Check portal entry
                 if hasattr(entity, 'check_player_overlap'):
                     entity.check_player_overlap(self.player)
-                
-                # Enemy collision damage (with cooldown)
-                if entity.is_enemy and hasattr(entity, 'damage'):
-                    if not hasattr(entity, '_last_damage_time'):
-                        entity._last_damage_time = -ENEMY_ATTACK_COOLDOWN
-                    
-                    time_since_damage = self.current_level.completion_time - entity._last_damage_time
-                    if time_since_damage >= ENEMY_ATTACK_COOLDOWN:
-                        # Calculate knockback from enemy to player
-                        dx = self.player.x - entity.x
-                        dy = self.player.y - entity.y
-                        length = (dx * dx + dy * dy) ** 0.5
-                        if length > 0:
-                            knockback_dir = (dx / length, dy / length)
-                        else:
-                            knockback_dir = (1, 0)
-                        
-                        damage = getattr(entity, 'damage', ENEMY_BASE_DAMAGE)
-                        self.player.take_damage(damage, knockback_dir)
-                        entity._last_damage_time = self.current_level.completion_time
+
+            # Enemy collision damage (with cooldown)
+            if entity.is_enemy and hasattr(entity, 'damage'):
+                if not self._is_enemy_contact(entity, player_rect, entity_rect):
+                    continue
+
+                if not hasattr(entity, '_last_damage_time'):
+                    entity._last_damage_time = -ENEMY_ATTACK_COOLDOWN
+
+                time_since_damage = self.current_level.completion_time - entity._last_damage_time
+                if time_since_damage >= ENEMY_ATTACK_COOLDOWN:
+                    # Calculate knockback from enemy center toward player center.
+                    dx = (self.player.x + self.player.width / 2) - (entity.x + entity.width / 2)
+                    dy = (self.player.y + self.player.height / 2) - (entity.y + entity.height / 2)
+                    length = (dx * dx + dy * dy) ** 0.5
+                    if length > 0:
+                        knockback_dir = (dx / length, dy / length)
+                    else:
+                        knockback_dir = (1, 0)
+
+                    damage = getattr(entity, 'damage', ENEMY_BASE_DAMAGE)
+                    self.player.take_damage(damage, knockback_dir)
+                    entity._last_damage_time = self.current_level.completion_time
     
     def _check_attack_hits(self) -> None:
         """Check if player's attack hits any enemies."""
