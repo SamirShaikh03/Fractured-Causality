@@ -124,8 +124,9 @@ class MultiverseManager:
            
         self.universes[universe.universe_type] = universe
         
-                                                     
-        if self._active_universe is None:
+        # Keep the active pointer in sync when a level replaces a universe instance.
+        # Without this, updates can continue on a stale universe object.
+        if self._active_universe is None or self._active_universe.universe_type == universe.universe_type:
             self.set_active_universe(universe.universe_type)
     
     def reset(self) -> None:

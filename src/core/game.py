@@ -586,25 +586,7 @@ class Game:
                 if hasattr(entity, 'take_damage'):
                     defeated = entity.take_damage(self.player.attack_damage)
                     
-                    # Hit feedback - particles at the hit point
-                    hit_x = (self.player.x + self.player.width / 2 + entity.x + entity.width / 2) / 2
-                    hit_y = (self.player.y + self.player.height / 2 + entity.y + entity.height / 2) / 2
-                    self.particles.emit(
-                        hit_x, hit_y,
-                        count=8, color=(255, 200, 100),
-                        speed=60, lifetime=0.3
-                    )
-                    
                     if defeated:
-                        # Visual feedback
-                        self.camera.shake(8, 0.15)
-                        # Spawn death particles at enemy position
-                        self.particles.emit(
-                            entity.x + entity.width / 2,
-                            entity.y + entity.height / 2,
-                            count=20, color=(255, 100, 100),
-                            speed=120, lifetime=0.6
-                        )
                         EventSystem.emit(GameEvent.UI_MESSAGE, {
                             "message": "Enemy defeated!",
                             "type": "success",
@@ -923,15 +905,6 @@ class Game:
             })
 
         self._level_complete()
-        
-        # Celebratory particles
-        self.particles.burst(
-            SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2,
-            100,
-            (100, 200, 255),
-            speed_range=(50, 200),
-            life_range=(1.0, 2.0)
-        )
     
     def _on_level_failed(self, data: dict) -> None:
         """Handle level failure."""
