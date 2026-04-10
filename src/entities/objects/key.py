@@ -110,7 +110,10 @@ class Key(Entity):
         self.exists = False
         if not hasattr(player, "keys_collected"):
             player.keys_collected = 0
+        if not hasattr(player, "total_keys_collected"):
+            player.total_keys_collected = 0
         player.keys_collected += 1
+        player.total_keys_collected += 1
         # Add to player inventory (if they have one)
         if hasattr(player, 'inventory'):
             player.inventory.add(self.entity_id)

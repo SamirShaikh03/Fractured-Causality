@@ -95,6 +95,7 @@ class TipManager:
         EventSystem.subscribe(GameEvent.ITEM_COLLECTED, self._on_item_collected)
         EventSystem.subscribe(GameEvent.ENEMY_DEFEATED, self._on_enemy_defeated)
         EventSystem.subscribe(GameEvent.PLAYER_DAMAGED, self._on_player_damaged)
+        EventSystem.subscribe(GameEvent.UI_TUTORIAL, self._on_ui_tutorial)
         
                                        
         self._register_global_tips()
@@ -407,6 +408,19 @@ class TipManager:
         tip = self._event_tips.get("first_damage_taken")
         if tip:
             self.queue_tip(tip)
+
+    def _on_ui_tutorial(self, data: dict) -> None:
+        tip = Tip(
+            tip_id=data.get("tip_id", f"ui_tutorial_{int(time.time() * 1000)}"),
+            title=data.get("title", "TIP"),
+            text=data.get("message", ""),
+            category=data.get("category", "info"),
+            duration=data.get("duration", 5.0),
+            priority=data.get("priority", 0),
+            show_once=data.get("show_once", True),
+            icon=data.get("icon", "?"),
+        )
+        self.queue_tip(tip)
     
     def _get_level_intro_text(self, level_id: str) -> str:
                                          
@@ -641,3 +655,4 @@ class TipManager:
         EventSystem.unsubscribe(GameEvent.ITEM_COLLECTED, self._on_item_collected)
         EventSystem.unsubscribe(GameEvent.ENEMY_DEFEATED, self._on_enemy_defeated)
         EventSystem.unsubscribe(GameEvent.PLAYER_DAMAGED, self._on_player_damaged)
+        EventSystem.unsubscribe(GameEvent.UI_TUTORIAL, self._on_ui_tutorial)

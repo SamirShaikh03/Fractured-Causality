@@ -118,9 +118,36 @@ class EchoWalker(Entity):
             if diff < best_diff:
                 best_diff = diff
                 best_pos = pos
-        
-        if best_pos:
-            self._target_position = best_pos
+
+        delayed_target = best_pos
+        delayed_dist = float('inf')
+        if delayed_target:
+            delayed_dist = self._distance_to_point(delayed_target)
+
+        ghost_target = None
+        ghost_dist = float('inf')
+        if self.universe is not None:
+            for entity in self.universe.entities:
+                if not getattr(entity, "is_ghost", False):
+                    continue
+                if not entity.exists:
+                    continue
+
+                candidate = (entity.x, entity.y)
+                dist = self._distance_to_point(candidate)
+                if dist < ghost_dist:
+                    ghost_dist = dist
+                    ghost_target = candidate
+
+        if ghost_target and ghost_dist < delayed_dist:
+            self._target_position = ghost_target
+        elif delayed_target:
+            self._target_position = delayed_target
+
+    def _distance_to_point(self, point: Tuple[float, float]) -> float:
+        dx = point[0] - self.x
+        dy = point[1] - self.y
+        return math.sqrt(dx * dx + dy * dy)
     
     def _move_toward_target(self, dt: float) -> None:
         if not self._target_position:

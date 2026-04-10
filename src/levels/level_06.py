@@ -10,6 +10,7 @@ from ..entities.objects.variant_door import VariantDoor
 from ..entities.objects.exit_portal import ExitPortal
 from ..entities.objects.key import Key
 from ..entities.enemies.echo_walker import EchoWalker
+from ..entities.enemies.paradox_wraith import ParadoxWraith
 from ..core.settings import TILE_SIZE
 from ..core.events import EventSystem, GameEvent
 
@@ -131,6 +132,18 @@ class Level06(Level):
         )
         self.add_entity(walker, [UniverseType.PRIME, UniverseType.ECHO])
 
+        prime_wraith = ParadoxWraith(
+            position=(16 * TILE_SIZE, 9 * TILE_SIZE),
+            paradox_threshold=0.0
+        )
+        self.add_entity(prime_wraith, [UniverseType.PRIME])
+
+        fracture_wraith = ParadoxWraith(
+            position=(16 * TILE_SIZE, 9 * TILE_SIZE),
+            paradox_threshold=0.0
+        )
+        self.add_entity(fracture_wraith, [UniverseType.FRACTURE])
+
         switch1 = EchoSwitch(
             position=(4 * TILE_SIZE, 9 * TILE_SIZE),
             switch_id="switch_06",
@@ -177,5 +190,10 @@ class Level06(Level):
                 "trigger": "near_fracture_key",
                 "message": "Some things only exist in the Fracture. Be careful in there.",
                 "position": (17, 9)
+            },
+            {
+                "trigger": "near_wraith",
+                "message": "Paradox Wraith detected. It now appears in both Prime and Fracture sectors.",
+                "position": (16, 9)
             }
         ]

@@ -11,6 +11,7 @@ from ..entities.objects.bridge import Bridge
 from ..entities.objects.exit_portal import ExitPortal
 from ..entities.objects.key import Key
 from ..entities.objects.causal_stone import CausalStone
+from ..entities.enemies.paradox_wraith import ParadoxWraith
 from ..core.settings import TILE_SIZE
 from ..core.events import EventSystem, GameEvent
 
@@ -112,6 +113,18 @@ class Level05(Level):
         )
         self.add_entity(stone, [UniverseType.PRIME, UniverseType.ECHO])
 
+        prime_wraith = ParadoxWraith(
+            position=(9 * TILE_SIZE, 7 * TILE_SIZE),
+            paradox_threshold=0.0
+        )
+        self.add_entity(prime_wraith, [UniverseType.PRIME])
+
+        echo_wraith = ParadoxWraith(
+            position=(15 * TILE_SIZE, 8 * TILE_SIZE),
+            paradox_threshold=0.0
+        )
+        self.add_entity(echo_wraith, [UniverseType.ECHO])
+
         switch1 = EchoSwitch(
             position=(10 * TILE_SIZE, 6 * TILE_SIZE),
             switch_id="switch_05_a",
@@ -152,5 +165,10 @@ class Level05(Level):
                 "trigger": "near_chasm",
                 "message": "The chasm is impassable. Switch universes to find a bridge.",
                 "position": (5, 6)
+            },
+            {
+                "trigger": "near_wraith",
+                "message": "Paradox Wraith spotted. It now roams these islands in both realities.",
+                "position": (9, 7)
             }
         ]

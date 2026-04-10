@@ -130,22 +130,31 @@ class PhysicsSystem:
            
         vx, vy = velocity
 
-                                                                          
-                                                                         
-        if getattr(entity, "is_phasing", False):
-            entity.x = entity.x + vx * dt
-            entity.y = entity.y + vy * dt
-            return (entity.x, entity.y)
+        is_phasing = getattr(entity, "is_phasing", False)
+        variant_door_type = None
+        if is_phasing:
+            from ..entities.objects.variant_door import VariantDoor
+            variant_door_type = VariantDoor
         
                                  
         new_x = entity.x + vx * dt
         entity.x = new_x
         
-                                     
-        h_collisions = self.check_tile_collision(
-            new_x, entity.y, entity.width, entity.height, universe
-        )
-        h_collisions.extend(self.check_entity_collision(entity, other_entities))
+                                    
+        if is_phasing:
+            h_collisions = []
+            for collision in self.check_entity_collision(entity, other_entities):
+                collision_entity = collision.entity
+                if collision_entity is None:
+                    continue
+                if variant_door_type is not None and not isinstance(collision_entity, variant_door_type):
+                    continue
+                h_collisions.append(collision)
+        else:
+            h_collisions = self.check_tile_collision(
+                new_x, entity.y, entity.width, entity.height, universe
+            )
+            h_collisions.extend(self.check_entity_collision(entity, other_entities))
         
         for collision in h_collisions:
             if collision.normal[0] != 0:
@@ -156,11 +165,21 @@ class PhysicsSystem:
         new_y = entity.y + vy * dt
         entity.y = new_y
         
-                                   
-        v_collisions = self.check_tile_collision(
-            entity.x, new_y, entity.width, entity.height, universe
-        )
-        v_collisions.extend(self.check_entity_collision(entity, other_entities))
+                                  
+        if is_phasing:
+            v_collisions = []
+            for collision in self.check_entity_collision(entity, other_entities):
+                collision_entity = collision.entity
+                if collision_entity is None:
+                    continue
+                if variant_door_type is not None and not isinstance(collision_entity, variant_door_type):
+                    continue
+                v_collisions.append(collision)
+        else:
+            v_collisions = self.check_tile_collision(
+                entity.x, new_y, entity.width, entity.height, universe
+            )
+            v_collisions.extend(self.check_entity_collision(entity, other_entities))
         
         for collision in v_collisions:
             if collision.normal[1] != 0:

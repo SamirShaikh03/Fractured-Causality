@@ -64,7 +64,9 @@ class VariantDoor(Entity):
         # Door state
         self.is_open: bool = is_open
         self.is_locked: bool = not is_open
+        self.is_solid: bool = self.solid
         self.requires_key: bool = requires_key
+        self.key_required: int = 1 if requires_key else 0
         self.key_id: str = key_id or ""
         
         # Universe-specific states
@@ -222,7 +224,15 @@ class VariantDoor(Entity):
                 if player_keys > 0:
                     player.keys_collected = player_keys - 1
                     self.unlock("key")
-                    return self.open("player")
+                    opened = self.open("player")
+                    self.solid = False
+                    self.is_solid = False
+                    EventSystem.emit(GameEvent.ENTITY_STATE_CHANGED, {
+                        "entity_id": getattr(self, "id", self.entity_id),
+                        "state": "open",
+                        "is_solid": False
+                    })
+                    return opened
 
                 EventSystem.emit(GameEvent.UI_MESSAGE, {
                     "message": "Need a key to open this door.",
@@ -246,16 +256,68 @@ class VariantDoor(Entity):
     def on_causal_change(self, new_state: EntityState, source_id: str = None) -> None:
         """Handle causal state changes."""
         if new_state == EntityState.OPEN:
-            self.unlock("causal")
-            self.open("causal")
+            if self.key_required > 0:
+                self.unlock("causal")
+                self.is_open = False
+                self.solid = True
+                self.is_solid = True
+                self._update_sprite()
+                EventSystem.emit(GameEvent.ENTITY_STATE_CHANGED, {
+                    "entity_id": getattr(self, "id", self.entity_id),
+                    "state": "unlocked",
+                    "is_solid": True
+                })
+            else:
+                self.unlock("causal")
+                self.open("causal")
+                self.solid = False
+                self.is_solid = False
+                EventSystem.emit(GameEvent.ENTITY_STATE_CHANGED, {
+                    "entity_id": getattr(self, "id", self.entity_id),
+                    "state": "open",
+                    "is_solid": False
+                })
         elif new_state == EntityState.CLOSED:
             self.close("causal")
+            self.solid = True
+            self.is_solid = True
+            EventSystem.emit(GameEvent.ENTITY_STATE_CHANGED, {
+                "entity_id": getattr(self, "id", self.entity_id),
+                "state": "closed",
+                "is_solid": True
+            })
         elif new_state == EntityState.ACTIVE:
-            self.unlock("causal")
-            self.open("causal")
+            if self.key_required > 0:
+                self.unlock("causal")
+                self.is_open = False
+                self.solid = True
+                self.is_solid = True
+                self._update_sprite()
+                EventSystem.emit(GameEvent.ENTITY_STATE_CHANGED, {
+                    "entity_id": getattr(self, "id", self.entity_id),
+                    "state": "unlocked",
+                    "is_solid": True
+                })
+            else:
+                self.unlock("causal")
+                self.open("causal")
+                self.solid = False
+                self.is_solid = False
+                EventSystem.emit(GameEvent.ENTITY_STATE_CHANGED, {
+                    "entity_id": getattr(self, "id", self.entity_id),
+                    "state": "open",
+                    "is_solid": False
+                })
         elif new_state == EntityState.INACTIVE:
             self.close("causal")
             self.lock()
+            self.solid = True
+            self.is_solid = True
+            EventSystem.emit(GameEvent.ENTITY_STATE_CHANGED, {
+                "entity_id": getattr(self, "id", self.entity_id),
+                "state": "locked",
+                "is_solid": True
+            })
         else:
             super().on_causal_change(new_state, source_id)
     

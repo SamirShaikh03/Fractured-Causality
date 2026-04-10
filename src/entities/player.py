@@ -10,7 +10,8 @@ from ..core.settings import (
     KEY_SWITCH_PRIME, KEY_SWITCH_ECHO, KEY_SWITCH_FRACTURE,
     UNIVERSE_SWITCH_COOLDOWN, TILE_SIZE,
     PLAYER_MAX_HEALTH, PLAYER_ATTACK_DAMAGE, PLAYER_ATTACK_RANGE,
-    PLAYER_ATTACK_COOLDOWN, PLAYER_INVINCIBILITY_TIME, get_ui_font
+    PLAYER_ATTACK_COOLDOWN, PLAYER_INVINCIBILITY_TIME,
+    GHOST_BUFFER_SECONDS, get_ui_font
 )
 from ..core.events import EventSystem, GameEvent
 from ..multiverse.universe import UniverseType
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 
 
 class Player(Entity):
+    GHOST_BUFFER_SECONDS = GHOST_BUFFER_SECONDS
     
     def __init__(self, position: Tuple[float, float] = (100, 100)):
         scaled_player_size = (
@@ -52,6 +54,7 @@ class Player(Entity):
         
         self.nearby_interactive: Optional[Entity] = None
         self.keys_collected: int = 0
+        self.total_keys_collected: int = 0
         self.rewards: int = 0
         
         self.animation_state: str = "idle"
@@ -75,7 +78,40 @@ class Player(Entity):
 
         self._interaction_font = get_ui_font(24)
 
+        self._ghost_buffer = []
+        self._ghost_buffer_duration = 0.0
+
         self._create_player_sprite()
+
+    def record_ghost_snapshot(self, dt: float, active_universe_type=None) -> None:
+        snapshot = {
+            "dt": dt,
+            "x": self.x,
+            "y": self.y,
+            "facing": self.facing,
+            "is_attacking": self.is_attacking,
+            "interacted": False,
+            "universe": active_universe_type if active_universe_type is not None else self.current_universe,
+        }
+
+        self._ghost_buffer.append(snapshot)
+        self._ghost_buffer_duration += dt
+
+        while self._ghost_buffer and self._ghost_buffer_duration > self.GHOST_BUFFER_SECONDS:
+            removed = self._ghost_buffer.pop(0)
+            self._ghost_buffer_duration -= removed.get("dt", 0.0)
+
+    def get_ghost_buffer_copy(self, universe_type) -> list:
+        target_universe = universe_type.value if hasattr(universe_type, "value") else universe_type
+        filtered = []
+
+        for snapshot in self._ghost_buffer:
+            snap_universe = snapshot.get("universe")
+            snap_universe_value = snap_universe.value if hasattr(snap_universe, "value") else snap_universe
+            if snap_universe_value == target_universe:
+                filtered.append(snapshot.copy())
+
+        return filtered
     
     @property
     def velocity_x(self) -> float:

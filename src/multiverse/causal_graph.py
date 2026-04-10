@@ -140,7 +140,8 @@ class CausalGraph:
         return [self.nodes[did] for did in dep_ids if did in self.nodes]
     
     def propagate_change(self, node_id: str, new_state: EntityState,
-                         universe_type: str = None) -> List[CausalChange]:
+                         universe_type: str = None,
+                         force: bool = False) -> List[CausalChange]:
            
         if node_id not in self.nodes:
             return []
@@ -155,7 +156,7 @@ class CausalGraph:
         source_node = self.nodes[node_id]
         old_state = source_node.state
         
-        if old_state == new_state:
+        if old_state == new_state and not force:
             return []             
         
                               

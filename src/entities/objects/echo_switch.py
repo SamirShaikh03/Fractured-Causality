@@ -55,6 +55,7 @@ class EchoSwitch(Entity):
         # Switch state
         self.is_on: bool = False
         self.is_locked: bool = False
+        self.pressure_activate: bool = True
         
         # Causal link
         self.linked_entity_id: str = linked_entity_id or ""
@@ -174,8 +175,14 @@ class EchoSwitch(Entity):
         else:
             return self.activate(source)
     
-    def on_interact(self, player) -> bool:
+    def on_interact(self, player=None, actor=None, event_system=None) -> bool:
         """Handle player interaction."""
+        interactor = actor if actor is not None else player
+        if interactor is not None and getattr(interactor, "is_ghost", False):
+            if not self.pressure_activate:
+                return False
+            return self.activate("ghost")
+
         return self.toggle("player")
     
     def add_pressure(self, entity_id: str) -> None:

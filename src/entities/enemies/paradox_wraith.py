@@ -44,6 +44,14 @@ class ParadoxWraith(Entity):
         self._spawn_immunity: float = 0.0
 
         self._create_sprite()
+
+        # Threshold <= 0 means this wraith should exist as a standard encounter.
+        if self.paradox_threshold <= 0:
+            self.is_manifested = True
+            self._manifest_progress = 1.0
+            self.exists = True
+            self.visible = True
+            self._spawn_immunity = 1.0
     
     def _create_sprite(self) -> None:
         loaded = load_entity_sprite("enemy_paradox_wraith.png", self.size)

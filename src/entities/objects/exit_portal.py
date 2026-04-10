@@ -30,6 +30,7 @@ class ExitPortal(Entity):
         self.stability: float = 1.0  # Affected by paradox
         self.requires_keys: int = requires_keys
         self.keys_collected: int = 0
+        self._overlap_warn_cooldown: float = 0.0
         
         # Animation
         self._rotation: float = 0.0
@@ -65,21 +66,26 @@ class ExitPortal(Entity):
         if not self.is_active:
             return False
 
-        player_keys = getattr(player, "keys_collected", 0)
-        if player_keys < self.requires_keys:
-            EventSystem.emit(GameEvent.UI_MESSAGE, {
-                "message": f"Need {self.requires_keys - player_keys} more key(s)!",
-                "type": "warning"
-            })
+        return self._validate_and_trigger(player)
+
+    def _validate_and_trigger(self, player) -> bool:
+        player_total_keys = getattr(player, "total_keys_collected", 0)
+        if player_total_keys < self.requires_keys:
+            if self._overlap_warn_cooldown <= 0:
+                EventSystem.emit(GameEvent.UI_MESSAGE, {
+                    "message": f"Need {self.requires_keys} keys - collected {player_total_keys}",
+                    "type": "warning"
+                })
+                self._overlap_warn_cooldown = 2.5
             return False
-        
+
         EventSystem.emit(GameEvent.LEVEL_COMPLETE, {
             "portal_id": self.entity_id,
             "stability": self.stability
         })
         return True
     
-    def check_player_overlap(self, player) -> bool:
+    def check_player_overlap(self, player, dt: float = 0.0) -> bool:
         """
         Check if player is overlapping the portal.
         
@@ -91,6 +97,8 @@ class ExitPortal(Entity):
         """
         if not self.is_active:
             return False
+
+        self._overlap_warn_cooldown = max(0.0, self._overlap_warn_cooldown - dt)
         
         # Use center distance
         portal_center = self.center
@@ -103,10 +111,8 @@ class ExitPortal(Entity):
         threshold = self.width // 3
         
         if distance < threshold:
-            if not self.player_nearby:
-                self.player_nearby = True
-                # Auto-trigger level complete
-                return self.on_interact(player)
+            self.player_nearby = True
+            return self._validate_and_trigger(player)
         else:
             self.player_nearby = False
         

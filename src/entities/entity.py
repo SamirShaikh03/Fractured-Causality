@@ -19,6 +19,8 @@ class EntityPersistence(Enum):
     
     EXCLUSIVE = "exclusive"
 
+    LOCAL = "local"
+
 
 @dataclass
 class EntityConfig:

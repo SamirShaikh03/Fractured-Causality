@@ -61,6 +61,13 @@ PLAYER_SPEED = 200  # pixels per second
 PLAYER_SIZE = (48, 48)
 PLAYER_INTERACTION_RANGE = 80
 
+# Temporal ghost settings
+GHOST_BUFFER_SECONDS = 8.0
+GHOST_ALPHA = 110
+GHOST_PARTICLE_INTERVAL = 0.08
+GHOST_COLOR = (160, 200, 255)
+GHOST_INTERACTION_RANGE = PLAYER_INTERACTION_RANGE
+
 # =============================================================================
 # PARADOX SETTINGS
 # =============================================================================

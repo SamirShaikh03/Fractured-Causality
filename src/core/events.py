@@ -36,6 +36,7 @@ class GameEvent(Enum):
     ENTITY_DESTROYED = auto()
     ENTITY_STATE_CHANGED = auto()
     ENTITY_INTERACTED = auto()
+    PARTICLE_SPAWN = auto()
     ITEM_COLLECTED = auto()
     KEY_COLLECTED = auto()
     DOOR_OPENED = auto()

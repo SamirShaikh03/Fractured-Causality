@@ -182,12 +182,16 @@ class Renderer:
     def render_entities(self, entities: List, camera: Camera) -> None:
            
         offset = camera.get_offset()
+        from ..entities.ghost_entity import GhostEntity
         
                                                    
         sorted_entities = sorted(entities, key=lambda e: e.y)
         
         for entity in sorted_entities:
             if not entity.visible or not entity.exists:
+                continue
+
+            if isinstance(entity, GhostEntity):
                 continue
             
                               

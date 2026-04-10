@@ -224,6 +224,8 @@ class MultiverseManager:
                                          
         old_universe = self._active_universe
         self.set_active_universe(self._switch_to)
+        if self._active_universe:
+            self._reconcile_existence_links(self._active_universe)
         
                                            
         if self.player:
@@ -252,6 +254,74 @@ class MultiverseManager:
         
         self._switch_from = None
         self._switch_to = None
+
+    def _reconcile_existence_links(self, universe: Universe) -> None:
+        """Re-evaluate incoming EXISTENCE dependencies for entities in a universe."""
+        if not universe:
+            return
+
+        for entity in list(universe.entities):
+            if not entity.exists:
+                continue
+
+            target_node = getattr(entity, "causal_node", None)
+            if not target_node:
+                continue
+
+            for dependency in target_node.dependencies:
+                operator = dependency.operator
+                operator_name = ""
+                if isinstance(operator, CausalOperator):
+                    operator_name = operator.name
+                elif isinstance(operator, str):
+                    operator_name = operator
+                elif hasattr(operator, "name"):
+                    operator_name = str(operator.name)
+                elif hasattr(operator, "value"):
+                    operator_name = str(operator.value)
+
+                if operator_name.lower() not in ("existence", "exists"):
+                    continue
+
+                source_universe: Optional[Universe] = None
+                source_universe_ref = dependency.source_universe
+                if source_universe_ref is not None:
+                    if isinstance(source_universe_ref, UniverseType):
+                        source_universe = self.get_universe(source_universe_ref)
+                    elif isinstance(source_universe_ref, str):
+                        parsed_universe_type = None
+                        try:
+                            parsed_universe_type = UniverseType(source_universe_ref.lower())
+                        except ValueError:
+                            try:
+                                parsed_universe_type = UniverseType[source_universe_ref.upper()]
+                            except (KeyError, TypeError):
+                                parsed_universe_type = None
+                        if parsed_universe_type is not None:
+                            source_universe = self.get_universe(parsed_universe_type)
+
+                source_entity = None
+                if source_universe is not None:
+                    source_entity = source_universe.get_entity(dependency.source_id)
+
+                source_node = self.causal_graph.get_node(dependency.source_id)
+                if source_entity and getattr(source_entity, "causal_node", None):
+                    source_state = source_entity.causal_node.state
+                elif source_node:
+                    source_state = source_node.state
+                else:
+                    continue
+
+                source_universe_type = None
+                if source_universe is not None:
+                    source_universe_type = source_universe.universe_type.value
+
+                self.causal_graph.propagate_change(
+                    dependency.source_id,
+                    source_state,
+                    source_universe_type,
+                    force=True
+                )
     
     def _apply_paradox_effects(self) -> None:
                                                      

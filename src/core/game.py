@@ -21,6 +21,7 @@ from ..multiverse.multiverse_manager import MultiverseManager
 from ..multiverse.universe import UniverseType
 
 from ..entities.player import Player
+from ..entities.ghost_entity import GhostEntity
 
 from ..levels.level_loader import LevelLoader
 from ..levels.level_01 import Level01
@@ -137,10 +138,17 @@ class Game:
         # Simple reward system
         self._reward_per_level: int = 10
         self._rewarded_levels: set[str] = set()
+        self._player_interacted_this_frame: bool = False
+        self._ghost_spawn_tip_shown: bool = False
         
         # Level loader
         self.level_loader = LevelLoader(self.multiverse)
         self.current_level = None
+        self._universe_ghosts: Dict[UniverseType, Optional[GhostEntity]] = {
+            UniverseType.PRIME: None,
+            UniverseType.ECHO: None,
+            UniverseType.FRACTURE: None,
+        }
     
     def _init_ui(self) -> None:
         """Initialize UI components."""
@@ -188,6 +196,7 @@ class Game:
         EventSystem.subscribe(GameEvent.LEVEL_FAILED, self._on_level_failed)
         EventSystem.subscribe(GameEvent.PLAYER_DIED, self._on_player_died)
         EventSystem.subscribe(GameEvent.CAUSAL_SIGHT_TOGGLED, self._on_causal_sight_toggled)
+        EventSystem.subscribe(GameEvent.PARTICLE_SPAWN, self._on_particle_spawn)
     
     async def run(self) -> None:
         """Main game loop (async for pygbag web deployment)."""
@@ -274,6 +283,8 @@ class Game:
     
     def _update_gameplay(self) -> None:
         """Update gameplay systems."""
+        self._player_interacted_this_frame = False
+
         # Update input handling for player
         self._handle_player_input()
         
@@ -285,12 +296,33 @@ class Game:
         # Update multiverse
         self.multiverse.update(self.dt)
 
+        active_universe_type = self.multiverse.active_type
+        for universe_type, ghost in self._universe_ghosts.items():
+            if universe_type == active_universe_type:
+                continue
+
+            if ghost and not ghost.finished:
+                ghost_universe = self.multiverse.get_universe(universe_type)
+                if ghost_universe:
+                    ghost.update(self.dt, ghost_universe, self.physics, EventSystem)
+
+                if ghost.finished:
+                    if ghost_universe:
+                        ghost_universe.remove_entity(ghost)
+                    self._universe_ghosts[universe_type] = None
+            elif ghost and ghost.finished:
+                ghost_universe = self.multiverse.get_universe(universe_type)
+                if ghost_universe:
+                    ghost_universe.remove_entity(ghost)
+                self._universe_ghosts[universe_type] = None
+
         # Stop enemies at player contact so they don't drag the player by overlap resolution.
         self._resolve_enemy_player_overlap(enemy_previous_positions)
 
         # Feed player position to enemies that track or hunt the player.
         if self.current_level:
             player_pos = (self.player.x, self.player.y)
+            paradox_level = self.multiverse.paradox_manager.level
             for entity in self.current_level.get_entities():
                 if not entity.exists:
                     continue
@@ -298,6 +330,8 @@ class Game:
                     entity.set_player_position(player_pos)
                 if hasattr(entity, 'record_player_position'):
                     entity.record_player_position(player_pos)
+                if hasattr(entity, 'set_paradox_level'):
+                    entity.set_paradox_level(paradox_level)
         
         # Update current level
         if self.current_level:
@@ -319,6 +353,10 @@ class Game:
             )
             
             self._check_entity_interactions()
+
+            self.player.record_ghost_snapshot(self.dt, active_universe.universe_type)
+            if self._player_interacted_this_frame and self.player._ghost_buffer:
+                self.player._ghost_buffer[-1]["interacted"] = True
         
         self.camera.follow(self.player)
         self.camera.update(self.dt)
@@ -353,7 +391,7 @@ class Game:
         
         # Interact
         if self.input_handler.is_pressed(InputAction.INTERACT):
-            self._try_interact()
+            self._player_interacted_this_frame = self._try_interact()
         
         # Attack
         if self.input_handler.is_pressed(InputAction.ATTACK):
@@ -405,10 +443,10 @@ class Game:
         else:
             return COLOR_FRACTURE
     
-    def _try_interact(self) -> None:
+    def _try_interact(self) -> bool:
         """Try to interact with nearby entities."""
         if not self.current_level:
-            return
+            return False
         
         player_rect = pygame.Rect(
             self.player.x - 10, self.player.y - 10,
@@ -446,6 +484,8 @@ class Game:
                 "type": "info",
                 "duration": 1.5
             })
+
+        return interacted
 
     def _capture_enemy_positions(self) -> Dict[str, Tuple[float, float]]:
         """Capture active enemy positions before universe/entity updates."""
@@ -544,7 +584,7 @@ class Game:
                 
                 # Check portal entry
                 if hasattr(entity, 'check_player_overlap'):
-                    entity.check_player_overlap(self.player)
+                    entity.check_player_overlap(self.player, self.dt)
 
             # Enemy collision damage (with cooldown)
             if entity.is_enemy and hasattr(entity, 'damage'):
@@ -856,6 +896,7 @@ class Game:
     
     def _on_universe_switched(self, data: dict) -> None:
         """Handle universe switch."""
+        switched_from = self._parse_universe_type(data.get('from'))
         u_type = data.get('type')
 
         if isinstance(u_type, str):
@@ -880,6 +921,60 @@ class Game:
 
         if u_type:
             self.universe_indicator.set_universe(u_type)
+
+        if u_type:
+            self._remove_universe_ghost(u_type)
+
+        if switched_from is not None:
+            departed_universe = self.multiverse.get_universe(switched_from)
+            if departed_universe:
+                self._remove_universe_ghost(switched_from)
+                replay_buffer = self.player.get_ghost_buffer_copy(switched_from)
+                if replay_buffer:
+                    ghost = GhostEntity(replay_buffer=replay_buffer, universe=departed_universe)
+                    first_snapshot = replay_buffer[0]
+                    ghost.x = first_snapshot.get('x', ghost.x)
+                    ghost.y = first_snapshot.get('y', ghost.y)
+                    departed_universe.add_entity(ghost)
+                    self._universe_ghosts[switched_from] = ghost
+
+                    if not self._ghost_spawn_tip_shown:
+                        self._ghost_spawn_tip_shown = True
+                        EventSystem.emit(GameEvent.UI_TUTORIAL, {
+                            "tip_id": "ghost_echo_hint",
+                            "title": "TEMPORAL ECHO",
+                            "message": "Your past self echoes behind - it can hold switches for you.",
+                            "category": "hint",
+                            "duration": 5.5,
+                            "priority": 100,
+                            "show_once": True,
+                            "icon": "~"
+                        })
+
+    def _parse_universe_type(self, value) -> Optional[UniverseType]:
+        if isinstance(value, UniverseType):
+            return value
+        if not isinstance(value, str):
+            return None
+
+        try:
+            return UniverseType(value)
+        except ValueError:
+            try:
+                return UniverseType[value]
+            except (KeyError, TypeError):
+                return None
+
+    def _remove_universe_ghost(self, universe_type: UniverseType) -> None:
+        ghost = self._universe_ghosts.get(universe_type)
+        if ghost is None:
+            return
+
+        universe = self.multiverse.get_universe(universe_type)
+        if universe:
+            universe.remove_entity(ghost)
+
+        self._universe_ghosts[universe_type] = None
     
     def _on_paradox_changed(self, data: dict) -> None:
         """Handle paradox level change."""
@@ -931,6 +1026,19 @@ class Game:
         self.tip_manager.reset_for_level()
         proximity_tips = self.tip_manager.get_level_proximity_tips(level_id)
         self.tip_manager.add_proximity_tips(proximity_tips)
+
+    def _on_particle_spawn(self, data: dict) -> None:
+        self.particles.emit(
+            data.get("x", 0),
+            data.get("y", 0),
+            count=data.get("count", 2),
+            color=data.get("color", (255, 255, 255)),
+            speed=data.get("speed", 80.0),
+            lifetime=data.get("lifetime", 0.8),
+            size_range=(data.get("size", 3), data.get("size", 3)),
+            gravity=0,
+            color_variance=0,
+        )
     
     def _cleanup(self) -> None:
         """Clean up resources."""
@@ -940,6 +1048,7 @@ class Game:
         self.causal_sight.clear_entity_positions()
         self.hud.cleanup()
         self.tip_manager.cleanup()
+        EventSystem.unsubscribe(GameEvent.PARTICLE_SPAWN, self._on_particle_spawn)
         EventSystem.clear()
         
         pygame.mixer.quit()
